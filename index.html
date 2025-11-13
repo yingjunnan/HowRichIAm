@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>打工人收入展示</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ["Inter", "system-ui", "Segoe UI", "Roboto", "sans-serif"] },
+          },
+        },
+      };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet" />
+    <script src="https://unpkg.com/vue@3"></script>
+  </head>
+  <body class="bg-slate-50 text-slate-900">
+    <div id="app" class="min-h-screen flex flex-col">
+      <div class="fixed inset-0 -z-10" :style="bgImageStyle"></div>
+      <div class="fixed inset-0 -z-10" :style="bgOverlayStyle"></div>
+      <header class="border-b bg-white/50 backdrop-blur sticky top-0 z-10">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <h1 class="text-xl sm:text-2xl font-bold">打工人收入展示</h1>
+          <div class="text-sm text-slate-600">{{ nowText }}</div>
+        </div>
+      </header>
+
+      <main class="max-w-6xl mx-auto w-full px-6 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section class="lg:col-span-2">
+          <div class="bg-white/70 backdrop-blur rounded-xl shadow-sm ring-1 ring-slate-200/60 p-8">
+            <div class="flex flex-col items-center justify-center text-center">
+              <div class="text-sm text-slate-700">今日收入</div>
+              <div class="mt-3 font-black tracking-tight tabular-nums leading-none text-6xl sm:text-7xl md:text-8xl">
+                {{ formatCurrency(todayEarned) }}
+              </div>
+              <div class="mt-4 text-slate-700 flex flex-wrap items-center justify-center gap-4">
+                <span>时薪 {{ formatCurrency(hourlyRate) }}</span>
+                <span>分薪 {{ formatCurrency(minuteRate) }}</span>
+                <span>秒薪 {{ formatCurrency(secondRate) }}</span>
+              </div>
+              <div class="mt-4">
+                <span v-if="!isWorkingToday" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200">今天非工作日</span>
+                <span v-else-if="!withinWorkWindow" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-200">不在工作时段</span>
+                <span v-else class="inline-flex items-center gap-2 px-3 py-1 rounded-full" :class="accent.badge">实时更新中</span>
+              </div>
+            </div>
+            <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="rounded-lg bg-white/60 backdrop-blur p-4">
+                <div class="text-xs text-slate-500">今日计划工作时长</div>
+                <div class="mt-1 text-lg font-semibold">{{ plannedHoursText }}</div>
+              </div>
+              <div class="rounded-lg bg-white/60 backdrop-blur p-4">
+                <div class="text-xs text-slate-500">今日预计总收入</div>
+                <div class="mt-1 text-lg font-semibold">{{ formatCurrency(todayPlannedIncome) }}</div>
+              </div>
+              <div class="rounded-lg bg-white/60 backdrop-blur p-4">
+                <div class="text-xs text-slate-500">午休时段</div>
+                <div class="mt-1 text-lg font-semibold">{{ lunchText }}</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="bg-white/70 backdrop-blur rounded-xl shadow-sm ring-1 ring-slate-200/60 p-6">
+            <div class="flex items-center justify-between">
+              <h2 class="text-lg font-semibold">配置</h2>
+              <button class="text-sm" :class="accent.link" @click="resetDefaults">恢复默认</button>
+            </div>
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label class="block">
+                <span class="text-sm text-slate-600">月薪（税前/人民币）</span>
+                <input type="number" min="0" step="0.01" v-model.number="conf.monthlySalary" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400" />
+              </label>
+              <label class="block">
+                <span class="text-sm text-slate-600">每天工作小时数</span>
+                <input type="number" min="1" max="24" step="0.1" v-model.number="conf.dailyHours" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400" />
+              </label>
+              <label class="block">
+                <span class="text-sm text-slate-600">上班时间</span>
+                <input type="time" v-model="conf.startTime" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400" />
+              </label>
+              <label class="block">
+                <span class="text-sm text-slate-600">下班时间</span>
+                <input type="time" v-model="conf.endTime" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400" />
+              </label>
+              <label class="block">
+                <span class="text-sm text-slate-600">午休开始</span>
+                <input type="time" v-model="conf.lunchStart" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400" />
+              </label>
+              <label class="block">
+                <span class="text-sm text-slate-600">午休结束</span>
+                <input type="time" v-model="conf.lunchEnd" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400" />
+              </label>
+            </div>
+
+            <div class="mt-6">
+              <div class="text-sm text-slate-600 mb-2">每周工作日</div>
+              <div class="grid grid-cols-7 gap-2">
+                <label v-for="d in weekDays" :key="d.value" class="flex items-center gap-2">
+                  <input type="checkbox" v-model="conf.workingDays" :value="d.value" class="rounded" />
+                  <span class="text-sm">{{ d.label }}</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label class="flex items-center gap-2">
+                <input type="checkbox" v-model="conf.includeWeekends" class="rounded" />
+                <span class="text-sm">周末也工作</span>
+              </label>
+              <label class="flex items-center gap-2">
+                <input type="checkbox" v-model="conf.usePreciseMonth" class="rounded" />
+                <span class="text-sm">按自然月工作日精确计算</span>
+              </label>
+            </div>
+
+            <div class="mt-8">
+              <h3 class="text-sm font-semibold">外观</h3>
+              <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label class="block">
+                  <span class="text-sm text-slate-600">主题色</span>
+                  <select v-model="conf.accent" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2">
+                    <option value="sky">天蓝</option>
+                    <option value="emerald">翠绿</option>
+                    <option value="rose">玫红</option>
+                    <option value="amber">琥珀</option>
+                    <option value="violet">紫罗兰</option>
+                    <option value="cyan">青色</option>
+                  </select>
+                </label>
+                <label class="block">
+                  <span class="text-sm text-slate-600">背景模式</span>
+                  <select v-model="conf.backgroundMode" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2">
+                    <option value="color">纯色</option>
+                    <option value="bing">Bing 壁纸</option>
+                    <option value="url">图片地址</option>
+                    <option value="upload">本地上传</option>
+                  </select>
+                </label>
+                <label v-if="conf.backgroundMode==='color'" class="block">
+                  <span class="text-sm text-slate-600">背景纯色</span>
+                  <input type="color" v-model="conf.bgColor" class="mt-1 w-full h-10 rounded-md border border-slate-300" />
+                </label>
+                <label class="block">
+                  <span class="text-sm text-slate-600">背景透明度</span>
+                  <input type="range" min="0" max="1" step="0.01" v-model.number="conf.bgOpacity" class="mt-1 w-full" />
+                </label>
+                <label class="block">
+                  <span class="text-sm text-slate-600">背景模糊(px)</span>
+                  <input type="range" min="0" max="20" step="1" v-model.number="conf.bgBlur" class="mt-1 w-full" />
+                </label>
+                <label class="block">
+                  <span class="text-sm text-slate-600">背景饱和度(%)</span>
+                  <input type="range" min="50" max="200" step="1" v-model.number="conf.bgSaturate" class="mt-1 w-full" />
+                </label>
+                <label v-if="conf.backgroundMode==='url'" class="block sm:col-span-2">
+                  <span class="text-sm text-slate-600">图片地址</span>
+                  <div class="mt-1 flex gap-2">
+                    <input type="text" v-model="conf.bgImageUrl" placeholder="https://example.com/image.jpg" class="flex-1 rounded-md border border-slate-300 px-3 py-2" />
+                    <button @click="useUrl" class="rounded-md px-3 py-2 text-white" :class="accent.button">使用</button>
+                  </div>
+                </label>
+                <div v-if="conf.backgroundMode==='bing'" class="sm:col-span-2 flex gap-2">
+                  <button @click="fetchBing" class="rounded-md px-3 py-2 text-white" :class="accent.button">获取 Bing 每日壁纸</button>
+                  <button @click="fetchPicsum" class="rounded-md px-3 py-2 text-white" :class="accent.secondaryButton">随机清新壁纸</button>
+                </div>
+                <label v-if="conf.backgroundMode==='upload'" class="block sm:col-span-2">
+                  <span class="text-sm text-slate-600">上传图片</span>
+                  <input type="file" accept="image/*" @change="onUpload" class="mt-1 w-full" />
+                </label>
+              </div>
+            </div>
+
+            <div class="mt-6">
+              <button @click="saveConf" class="inline-flex items-center justify-center rounded-md px-4 py-2 text-white" :class="accent.button">保存配置</button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="mt-auto py-6 text-center text-xs text-slate-500">© {{ year }} 打工人加油</footer>
+
+      <div class="hidden">
+        bg-sky-600 hover:bg-sky-700 bg-emerald-600 hover:bg-emerald-700 bg-rose-600 hover:bg-rose-700 bg-amber-600 hover:bg-amber-700 bg-violet-600 hover:bg-violet-700 bg-cyan-600 hover:bg-cyan-700
+        text-sky-700 ring-sky-200 bg-sky-50 text-emerald-700 ring-emerald-200 bg-emerald-50 text-rose-700 ring-rose-200 bg-rose-50 text-amber-700 ring-amber-200 bg-amber-50 text-violet-700 ring-violet-200 bg-violet-50 text-cyan-700 ring-cyan-200 bg-cyan-50
+      </div>
+    </div>
+
+    <script>
+      const { createApp, reactive, computed, watch, onMounted } = Vue;
+
+      function timeToSeconds(t) {
+        const [h, m] = t.split(":").map(Number);
+        return h * 3600 + m * 60;
+      }
+
+      function clamp(n, min, max) {
+        return Math.max(min, Math.min(n, max));
+      }
+
+      function overlapSeconds(aStart, aEnd, bStart, bEnd) {
+        const s = Math.max(aStart, bStart);
+        const e = Math.min(aEnd, bEnd);
+        return Math.max(0, e - s);
+      }
+
+      function countWorkingDaysInMonth(year, month, workingDays) {
+        const d = new Date(year, month, 1);
+        let count = 0;
+        while (d.getMonth() === month) {
+          const wd = d.getDay() === 0 ? 7 : d.getDay();
+          if (workingDays.includes(wd)) count++;
+          d.setDate(d.getDate() + 1);
+        }
+        return count;
+      }
+
+      createApp({
+        setup() {
+          const defaults = {
+            monthlySalary: 12000,
+            dailyHours: 8,
+            startTime: "09:00",
+            endTime: "18:00",
+            lunchStart: "12:00",
+            lunchEnd: "13:00",
+            workingDays: [1, 2, 3, 4, 5],
+            includeWeekends: false,
+            usePreciseMonth: false,
+            accent: "sky",
+            backgroundMode: "color",
+            bgColor: "#e6f7ff",
+            bgOpacity: 0.25,
+            bgBlur: 4,
+            bgSaturate: 120,
+            bgImageUrl: "",
+          };
+
+          const conf = reactive(JSON.parse(localStorage.getItem("incomeConf") || JSON.stringify(defaults)));
+
+          const weekDays = [
+            { label: "周一", value: 1 },
+            { label: "周二", value: 2 },
+            { label: "周三", value: 3 },
+            { label: "周四", value: 4 },
+            { label: "周五", value: 5 },
+            { label: "周六", value: 6 },
+            { label: "周日", value: 7 },
+          ];
+
+          const now = reactive({ ts: Date.now() });
+          const bg = reactive({ imageUrl: conf.bgImageUrl || "" });
+
+          const nowDate = computed(() => new Date(now.ts));
+          const nowText = computed(() => nowDate.value.toLocaleString("zh-CN"));
+          const year = computed(() => nowDate.value.getFullYear());
+
+          const isWorkingToday = computed(() => {
+            if (conf.includeWeekends) return true;
+            const wd = nowDate.value.getDay() === 0 ? 7 : nowDate.value.getDay();
+            return conf.workingDays.includes(wd);
+          });
+
+          const startSec = computed(() => timeToSeconds(conf.startTime));
+          const endSec = computed(() => timeToSeconds(conf.endTime));
+          const lunchStartSec = computed(() => timeToSeconds(conf.lunchStart));
+          const lunchEndSec = computed(() => timeToSeconds(conf.lunchEnd));
+
+          const withinWorkWindow = computed(() => {
+            const s = startSec.value;
+            const e = endSec.value;
+            const cur = nowDate.value.getHours() * 3600 + nowDate.value.getMinutes() * 60 + nowDate.value.getSeconds();
+            return isWorkingToday.value && cur >= Math.min(s, e) && cur <= Math.max(s, e);
+          });
+
+          const dailyPlannedSeconds = computed(() => {
+            const s = startSec.value;
+            const e = endSec.value;
+            const ls = lunchStartSec.value;
+            const le = lunchEndSec.value;
+            const total = Math.max(0, Math.abs(e - s));
+            const lunch = overlapSeconds(Math.min(s, e), Math.max(s, e), Math.min(ls, le), Math.max(ls, le));
+            return Math.max(0, total - lunch);
+          });
+
+          const plannedHoursText = computed(() => {
+            const h = dailyPlannedSeconds.value / 3600;
+            return h.toFixed(2) + " 小时";
+          });
+
+          const lunchText = computed(() => conf.lunchStart + " - " + conf.lunchEnd);
+
+          const weeksPerMonth = 4.345;
+
+          const monthlyWorkingHours = computed(() => {
+            if (conf.usePreciseMonth) {
+              const y = nowDate.value.getFullYear();
+              const m = nowDate.value.getMonth();
+              const count = conf.includeWeekends ? new Date(y, m + 1, 0).getDate() : countWorkingDaysInMonth(y, m, conf.workingDays);
+              return (dailyPlannedSeconds.value / 3600) * count;
+            }
+            return weeksPerMonth * conf.workingDays.length * (dailyPlannedSeconds.value / 3600);
+          });
+
+          const hourlyRate = computed(() => {
+            const hours = monthlyWorkingHours.value || 1;
+            return conf.monthlySalary / hours;
+          });
+
+          const minuteRate = computed(() => hourlyRate.value / 60);
+          const secondRate = computed(() => hourlyRate.value / 3600);
+
+          const workedSecondsSoFar = computed(() => {
+            if (!isWorkingToday.value) return 0;
+            const s = startSec.value;
+            const e = endSec.value;
+            const ls = lunchStartSec.value;
+            const le = lunchEndSec.value;
+            const cur = nowDate.value.getHours() * 3600 + nowDate.value.getMinutes() * 60 + nowDate.value.getSeconds();
+            const start = Math.min(s, e);
+            const end = Math.max(s, e);
+            const progressed = clamp(cur - start, 0, Math.max(0, end - start));
+            const lunchOverlap = overlapSeconds(start, start + progressed, Math.min(ls, le), Math.max(ls, le));
+            return Math.max(0, progressed - lunchOverlap);
+          });
+
+          const todayEarned = computed(() => workedSecondsSoFar.value * secondRate.value);
+          const todayPlannedIncome = computed(() => dailyPlannedSeconds.value * secondRate.value);
+
+          function formatCurrency(n) {
+            return new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY" }).format(n || 0);
+          }
+
+          function saveConf() {
+            localStorage.setItem("incomeConf", JSON.stringify(conf));
+          }
+
+          function resetDefaults() {
+            Object.assign(conf, defaults);
+            saveConf();
+          }
+
+          function hexToRgba(hex, alpha) {
+            const h = hex.replace("#", "");
+            const bigint = parseInt(h.length === 3 ? h.split("").map(x => x + x).join("") : h, 16);
+            const r = (bigint >> 16) & 255;
+            const g = (bigint >> 8) & 255;
+            const b = bigint & 255;
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+          }
+
+          const bgImageStyle = computed(() => {
+            if (conf.backgroundMode === "color") {
+              return { background: conf.bgColor };
+            }
+            const url = bg.imageUrl || conf.bgImageUrl || "";
+            return {
+              backgroundImage: url ? `url('${url}')` : "none",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundAttachment: "fixed",
+              filter: `blur(${conf.bgBlur}px) saturate(${conf.bgSaturate}%)`,
+            };
+          });
+
+          const bgOverlayStyle = computed(() => ({
+            backgroundColor: hexToRgba(conf.bgColor, conf.bgOpacity),
+          }));
+
+          const accentMap = {
+            sky: {
+              button: "bg-sky-600 hover:bg-sky-700",
+              secondaryButton: "bg-slate-800/70 hover:bg-slate-900",
+              badge: "bg-sky-50 text-sky-700 ring-1 ring-sky-200",
+              link: "text-sky-700 hover:text-sky-900",
+            },
+            emerald: {
+              button: "bg-emerald-600 hover:bg-emerald-700",
+              secondaryButton: "bg-slate-800/70 hover:bg-slate-900",
+              badge: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
+              link: "text-emerald-700 hover:text-emerald-900",
+            },
+            rose: {
+              button: "bg-rose-600 hover:bg-rose-700",
+              secondaryButton: "bg-slate-800/70 hover:bg-slate-900",
+              badge: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
+              link: "text-rose-700 hover:text-rose-900",
+            },
+            amber: {
+              button: "bg-amber-600 hover:bg-amber-700",
+              secondaryButton: "bg-slate-800/70 hover:bg-slate-900",
+              badge: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+              link: "text-amber-700 hover:text-amber-900",
+            },
+            violet: {
+              button: "bg-violet-600 hover:bg-violet-700",
+              secondaryButton: "bg-slate-800/70 hover:bg-slate-900",
+              badge: "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
+              link: "text-violet-700 hover:text-violet-900",
+            },
+            cyan: {
+              button: "bg-cyan-600 hover:bg-cyan-700",
+              secondaryButton: "bg-slate-800/70 hover:bg-slate-900",
+              badge: "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200",
+              link: "text-cyan-700 hover:text-cyan-900",
+            },
+          };
+
+          const accent = computed(() => accentMap[conf.accent] || accentMap.sky);
+
+          async function fetchBing() {
+            try {
+              const resp = await fetch("https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=zh-CN");
+              const data = await resp.json();
+              const path = (data.images && data.images[0] && data.images[0].url) || "";
+              const url = path ? `https://www.bing.com${path}` : "";
+              bg.imageUrl = url;
+              conf.bgImageUrl = url;
+              saveConf();
+            } catch (e) {
+              console.error(e);
+            }
+          }
+
+          async function fetchPicsum() {
+            bg.imageUrl = "https://picsum.photos/1920/1080";
+            conf.bgImageUrl = bg.imageUrl;
+            saveConf();
+          }
+
+          function useUrl() {
+            bg.imageUrl = conf.bgImageUrl || "";
+            saveConf();
+          }
+
+          function onUpload(ev) {
+            const file = ev.target.files && ev.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+              bg.imageUrl = reader.result;
+              conf.bgImageUrl = bg.imageUrl;
+              saveConf();
+            };
+            reader.readAsDataURL(file);
+          }
+
+          watch(conf, saveConf, { deep: true });
+
+          onMounted(() => {
+            setInterval(() => (now.ts = Date.now()), 1000);
+          });
+
+          return {
+            conf,
+            weekDays,
+            nowText,
+            year,
+            isWorkingToday,
+            withinWorkWindow,
+            hourlyRate,
+            minuteRate,
+            secondRate,
+            todayEarned,
+            todayPlannedIncome,
+            plannedHoursText,
+            lunchText,
+            formatCurrency,
+            saveConf,
+            resetDefaults,
+            bgImageStyle,
+            bgOverlayStyle,
+            accent,
+            fetchBing,
+            fetchPicsum,
+            useUrl,
+            onUpload,
+          };
+        },
+      }).mount("#app");
+    </script>
+  </body>
+</html>
