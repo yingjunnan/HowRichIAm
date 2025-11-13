@@ -1,1160 +1,758 @@
-<html lang="zh-CN"><head>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>打工人收入展示</title>
-    <!-- Tailwind CSS -->
+    <title>打工人收入计算器 💰</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#1E40AF', // 专业商务蓝
-                        secondary: '#F97316', // 活力橙
-                        dark: '#0F172A',
-                        light: '#F8FAFC',
-                        'glass': 'rgba(255, 255, 255, 0.25)',
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .glass-effect {
-                @apply bg-glass backdrop-blur-lg bg-opacity-20 border border-white/10 shadow-lg;
-            }
-            .text-shadow {
-                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            }
-            .text-gradient {
-                @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
-            }
-            .card-hover {
-                @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
-            }
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
         
-        /* 自定义样式 */
         body {
             overflow-x: hidden;
-            font-family: 'Inter', system-ui, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         }
         
-        /* 修复下拉列表样式 */
-        select {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-            background-position: right 0.5rem center;
-            background-repeat: no-repeat;
-            background-size: 1.5em 1.5em;
-            padding-right: 2.5rem;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
-        select option {
-            background-color: rgba(15, 23, 42, 0.9);
-            color: white;
+        .dark-glass {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
-        /* 设置弹窗中的下拉列表样式 */
-        .text-dark select {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%234B5563' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        .income-display {
+            animation: pulse 2s infinite;
         }
         
-        .text-dark select option {
-            background-color: white;
-            color: #1F2937;
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
         }
         
-        .bg-blur {
-            backdrop-filter: blur(var(--bg-blur, 8px));
-            -webkit-backdrop-filter: blur(var(--bg-blur, 8px));
-        }
-        
-        .income-counter {
+        .income-number {
             font-variant-numeric: tabular-nums;
-            animation: count-up 1s ease-out forwards;
+            letter-spacing: -0.02em;
         }
         
-        @keyframes count-up {
-            from { opacity: 0.5; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .settings-panel {
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(100%);
         }
         
-        .slider-track {
-            height: 4px;
+        .settings-panel.show {
+            transform: translateX(0);
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+            pointer-events: none;
+            white-space: nowrap;
+            max-width: 300px;
+            white-space: normal;
+        }
+        
+        .income-animation {
+            animation: incomeGlow 0.5s ease-out;
+        }
+        
+        @keyframes incomeGlow {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .progress-bar {
+            transition: width 0.5s ease-out;
+        }
+        
+        .question-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
             background: rgba(255, 255, 255, 0.2);
-            border-radius: 2px;
-        }
-        
-        .slider-thumb {
-            width: 16px;
-            height: 16px;
-            background: white;
             border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
-            transition: box-shadow 0.2s;
+            font-size: 12px;
+            margin-left: 8px;
+            cursor: help;
         }
         
-        .slider-thumb:hover {
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        .break-time-indicator {
+            animation: blink 1.5s infinite;
         }
         
-        /* 修复滑块样式 */
-        input[type="range"] {
-            @apply w-full appearance-none bg-transparent;
-        }
-        
-        input[type="range"]::-webkit-slider-runnable-track {
-            @apply slider-track;
-        }
-        
-        input[type="range"]::-webkit-slider-thumb {
-            @apply slider-thumb appearance-none -mt-6;
-        }
-        
-        /* 深色模式 */
-        .dark-theme {
-            @apply bg-gradient-to-br from-gray-900 to-gray-800;
-        }
-        
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 24px;
-        }
-        
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(255, 255, 255, 0.2);
-            transition: .4s;
-            border-radius: 24px;
-        }
-        
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        
-        input:checked + .toggle-slider {
-            background-color: #1E40AF;
-        }
-        
-        input:checked + .toggle-slider:before {
-            transform: translateX(26px);
-        }
-        
-        /* 背景动画效果 */
-        .animated-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            overflow: hidden;
-        }
-        
-        .animated-bg::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
-            animation: bg-animation 8s ease-in-out infinite alternate;
-        }
-        
-        @keyframes bg-animation {
-            0% { transform: rotate(0deg) scale(1); }
-            100% { transform: rotate(30deg) scale(1.2); }
-        }
-        
-        /* 计算说明提示框样式 */
-        #calculation-info {
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
-            transform: translateY(10px);
-        }
-        
-        #calculation-info.show {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-        
-        #natural-month-note {
-            color: #1E40AF;
-            font-weight: bold;
-            font-style: italic;
+        @keyframes blink {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
         }
     </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-primary/90 to-secondary/90 text-white">
-    <!-- 背景图 -->
-    <div id="background-image" class="fixed inset-0 z-[-2] bg-cover bg-center transition-all duration-1000" style="background-image: url('https://p11-doubao-search-sign.byteimg.com/labis/f2dd97fed4454a7f2b9a8506f98d64d9~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&amp;x-expires=1778561071&amp;x-signature=KVuncWJxLvTCkJJVSK16wPd%2FQwY%3D'); opacity: 0.8;"></div>
-    
-    <!-- 背景模糊层 -->
-    <div id="background-blur" class="fixed inset-0 z-[-1] bg-dark/30 bg-blur transition-all duration-1000" style="--bg-blur: 8px;"></div>
-    
-    <!-- 背景动画 -->
-    <div class="animated-bg"></div>
-    
-    <!-- 主容器 -->
-    <div class="container mx-auto px-4 py-8 max-w-7xl">
-        <!-- 顶部导航 -->
-        <header class="flex justify-between items-center mb-8">
-            <div class="flex items-center space-x-2">
-                <i class="fa fa-line-chart text-2xl text-secondary"></i>
-                <h1 class="text-2xl font-bold text-shadow">打工人收入展示</h1>
-            </div>
+<body>
+    <div id="app">
+        <!-- 背景层 -->
+        <div class="fixed inset-0 -z-10" :style="backgroundStyle">
+            <img v-if="settings.wallpaperUrl" :src="settings.wallpaperUrl" 
+                 class="w-full h-full object-cover" 
+                 :style="{ filter: `blur(${settings.wallpaperBlur}px)` }">
+            <div v-else class="w-full h-full" :style="{ background: settings.themeColor }"></div>
+        </div>
+
+        <!-- 设置面板遮罩 -->
+        <div v-if="showSettings" 
+             @click="toggleSettings"
+             class="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"></div>
+
+        <!-- 主容器 -->
+        <div class="min-h-screen flex flex-col relative" :style="{ background: `rgba(0,0,0,${1-settings.pageOpacity})` }">
             
-            <div class="flex items-center space-x-4">
-                <button id="theme-toggle" class="p-2 rounded-full hover:bg-white/10 transition-colors">
-                    <i class="fa fa-moon-o text-xl"></i>
+            <!-- 顶部栏 -->
+            <header class="p-4 flex justify-between items-center">
+                <button @click.stop="toggleSettings" 
+                        class="glass-effect dark-glass px-4 py-2 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition">
+                    <i class="fas fa-cog mr-2"></i>设置
                 </button>
-                <button id="settings-button" class="p-2 rounded-full hover:bg-white/10 transition-colors">
-                    <i class="fa fa-cog text-xl"></i>
-                </button>
-            </div>
-        </header>
-        
-        <!-- 主内容区 -->
-        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- 左侧配置面板 -->
-            <div class="lg:col-span-1 space-y-6">
-                <!-- 收入配置卡片 -->
-                <div class="glass-effect rounded-xl p-6 card-hover">
-                    <h2 class="text-xl font-semibold mb-4 flex items-center">
-                        <i class="fa fa-money mr-2 text-secondary"></i>
-                        收入配置
-                    </h2>
+                <div class="flex gap-2">
+                    <button @click="loadRandomWallpaper"
+                            class="glass-effect dark-glass px-4 py-2 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition">
+                        <i class="fas fa-image"></i>
+                    </button>
+                    <button @click="toggleFullscreen" 
+                            class="glass-effect dark-glass px-4 py-2 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                    <button @click="changeTheme" 
+                            class="glass-effect dark-glass px-4 py-2 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition">
+                        <i class="fas fa-palette"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- 主内容区 -->
+            <main class="flex-1 flex items-center justify-center p-8">
+                <div class="text-center max-w-4xl mx-auto">
                     
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">月薪 (元)</label>
-                            <div class="relative">
-                                <input type="number" id="monthly-salary" min="0" max="1000000" step="100" value="10000" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary">
+                    <!-- 实时收入显示 -->
+                    <div class="income-display mb-8 relative">
+                        <h2 class="text-white text-2xl mb-4 opacity-80 flex items-center justify-center">
+                            今日已赚
+                            <span class="question-mark" 
+                                  @mouseenter="showTooltip($event)" 
+                                  @mouseleave="hideTooltip"
+                                  ref="questionMark">?</span>
+                        </h2>
+                        <div class="income-animation">
+                            <div class="text-6xl md:text-8xl font-bold text-white mb-2 income-number">
+                                ¥{{ formatNumber(currentDayIncome) }}
+                            </div>
+                            <div class="text-white text-3xl md:text-4xl opacity-60 income-number">
+                                <span v-if="!isOnBreak">+{{ formatNumber(perSecondIncome) }}/秒</span>
+                                <span v-else class="break-time-indicator">
+                                    <i class="fas fa-coffee mr-2"></i>午休时间
+                                </span>
                             </div>
                         </div>
                         
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">每周工作天数</label>
-                                <input type="number" id="work-days-per-week" min="1" max="7" value="5" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary">
+                        <!-- 日薪显示 -->
+                        <div class="glass-effect dark-glass rounded-lg px-4 py-2 mt-4 inline-block">
+                            <span class="text-white opacity-80">日薪: </span>
+                            <span class="text-white text-xl font-bold income-number">¥{{ formatNumber(dailyIncome) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- 工作进度 -->
+                    <div class="glass-effect dark-glass rounded-xl p-6 mb-6">
+                        <div class="flex justify-between text-white mb-2">
+                            <span>今日工作进度</span>
+                            <span>{{ Math.round(workProgress) }}%</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-4 overflow-hidden">
+                            <div class="progress-bar bg-gradient-to-r from-green-400 to-blue-500 h-full rounded-full"
+                                 :style="{ width: `${workProgress}%` }"></div>
+                        </div>
+                        <div class="text-white mt-4 text-center">
+                            <span v-if="isWorkingTime && !isOnBreak" class="text-xl">
+                                <i class="fas fa-clock mr-2"></i>
+                                距离下班还有 {{ countdownToWorkEnd }}
+                            </span>
+                            <span v-else-if="isOnBreak" class="text-xl break-time-indicator">
+                                <i class="fas fa-utensils mr-2"></i>
+                                现在是午休时间，距离上班还有 {{ countdownToBreakEnd }}
+                            </span>
+                            <span v-else-if="isBeforeWork" class="text-xl">
+                                <i class="fas fa-bed mr-2"></i>
+                                距离上班还有 {{ countdownToWorkStart }}
+                            </span>
+                            <span v-else class="text-xl">
+                                <i class="fas fa-check-circle mr-2"></i>
+                                今日工作已完成！
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 统计信息 -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="glass-effect dark-glass rounded-xl p-4">
+                            <div class="text-white opacity-80 mb-1">每小时收入</div>
+                            <div class="text-2xl font-bold text-white income-number">¥{{ formatNumber(perHourIncome) }}</div>
+                        </div>
+                        <div class="glass-effect dark-glass rounded-xl p-4">
+                            <div class="text-white opacity-80 mb-1">每分钟收入</div>
+                            <div class="text-2xl font-bold text-white income-number">¥{{ formatNumber(perMinuteIncome) }}</div>
+                        </div>
+                        <div class="glass-effect dark-glass rounded-xl p-4">
+                            <div class="text-white opacity-80 mb-1">本月预计收入</div>
+                            <div class="text-2xl font-bold text-white income-number">¥{{ formatNumber(monthlyEstimatedIncome) }}</div>
+                        </div>
+                    </div>
+
+                    <!-- 快速统计 -->
+                    <div class="glass-effect dark-glass rounded-xl p-4">
+                        <div class="flex justify-around text-white">
+                            <div class="text-center">
+                                <div class="opacity-60 text-sm">本月已工作</div>
+                                <div class="text-xl font-bold">{{ workedDaysThisMonth }} 天</div>
                             </div>
-                            
-                            <div>
-                                <label class="block text-sm font-medium mb-1">每日工作小时</label>
-                                <input type="number" id="work-hours-per-day" min="1" max="24" value="8" step="0.5" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary">
+                            <div class="text-center">
+                                <div class="opacity-60 text-sm">本月已赚</div>
+                                <div class="text-xl font-bold">¥{{ formatNumber(currentMonthIncome) }}</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="opacity-60 text-sm">距离目标</div>
+                                <div class="text-xl font-bold">¥{{ formatNumber(remainingToTarget) }}</div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- 时间配置卡片 -->
-                <div class="glass-effect rounded-xl p-6 card-hover">
-                    <h2 class="text-xl font-semibold mb-4 flex items-center">
-                        <i class="fa fa-clock-o mr-2 text-secondary"></i>
-                        时间配置
-                    </h2>
-                    
-                    <div class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
+            </main>
+
+            <!-- 设置面板 -->
+            <aside class="fixed right-0 top-0 h-full w-80 bg-gray-900 text-white settings-panel overflow-y-auto z-50"
+                  :class="{ show: showSettings }">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold">设置</h3>
+                        <button @click="toggleSettings" class="text-gray-400 hover:text-white">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <!-- 收入设置 -->
+                    <div class="mb-6">
+                        <h4 class="font-semibold mb-3">收入配置</h4>
+                        <div class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium mb-1">上班时间</label>
-                                <input type="time" id="work-start-time" value="09:00" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary">
+                                <label class="block text-sm opacity-80 mb-1">月薪 (元)</label>
+                                <input type="number" v-model.number="config.monthlySalary" 
+                                       class="w-full bg-gray-800 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
-                            
                             <div>
-                                <label class="block text-sm font-medium mb-1">下班时间</label>
-                                <input type="time" id="work-end-time" value="18:00" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary">
+                                <label class="block text-sm opacity-80 mb-1">每周工作天数</label>
+                                <input type="range" min="1" max="7" v-model.number="config.workDaysPerWeek" 
+                                       class="w-full">
+                                <div class="text-center text-sm opacity-60">{{ config.workDaysPerWeek }} 天</div>
                             </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium mb-1">午休开始时间</label>
-                                <input type="time" id="lunch-start-time" value="12:00" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary">
+                                <label class="block text-sm opacity-80 mb-1">每天工作时长 (小时)</label>
+                                <input type="number" v-model.number="config.dailyWorkHours" 
+                                       class="w-full bg-gray-800 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
-                            
-                            <div>
-                                <label class="block text-sm font-medium mb-1">午休结束时间</label>
-                                <input type="time" id="lunch-end-time" value="13:00" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary">
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-center justify-between">
-                            <label class="text-sm font-medium">按自然月天数计算</label>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="natural-month-toggle">
-                                <span class="toggle-slider"></span>
-                            </label>
                         </div>
                     </div>
-                </div>
-                
-                <!-- 主题配置卡片 -->
-                <div class="glass-effect rounded-xl p-6 card-hover">
-                    <h2 class="text-xl font-semibold mb-4 flex items-center">
-                        <i class="fa fa-paint-brush mr-2 text-secondary"></i>
-                        主题配置
-                    </h2>
-                    
-                    <div class="space-y-4">
+
+                    <!-- 工作时间设置 -->
+                    <div class="mb-6">
+                        <h4 class="font-semibold mb-3">工作时间</h4>
+                        <div class="space-y-4">
+                            <div class="flex gap-2">
+                                <div class="flex-1">
+                                    <label class="block text-sm opacity-80 mb-1">上班时间</label>
+                                    <input type="time" v-model="config.workStartTime" 
+                                           class="w-full bg-gray-800 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block text-sm opacity-80 mb-1">下班时间</label>
+                                    <input type="time" v-model="config.workEndTime" 
+                                           class="w-full bg-gray-800 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm opacity-80 mb-1">午休时间</label>
+                                <div class="flex gap-2">
+                                    <div class="flex-1">
+                                        <input type="time" v-model="config.lunchStartTime" 
+                                               class="w-full bg-gray-800 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                    <div class="flex items-center px-2">至</div>
+                                    <div class="flex-1">
+                                        <input type="time" v-model="config.lunchEndTime" 
+                                               class="w-full bg-gray-800 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 刷新设置 -->
+                    <div class="mb-6">
+                        <h4 class="font-semibold mb-3">刷新设置</h4>
                         <div>
-                            <label class="block text-sm font-medium mb-1">背景图片</label>
-                            <select id="background-select" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary">
-                                <option value="https://p11-doubao-search-sign.byteimg.com/labis/f2dd97fed4454a7f2b9a8506f98d64d9~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&amp;x-expires=1778561071&amp;x-signature=KVuncWJxLvTCkJJVSK16wPd%2FQwY%3D">城市夜景 1</option>
-                                <option value="https://p11-doubao-search-sign.byteimg.com/labis/258896e93da6a57abd03413adc91ab06~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&amp;x-expires=1778561071&amp;x-signature=JbCsOsQxtxuUTw%2Bio42e%2Fys3r10%3D">城市夜景 2</option>
-                                <option value="https://p11-doubao-search-sign.byteimg.com/labis/8966e9d3014edf198cda12fe3abb169e~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&amp;x-expires=1778561071&amp;x-signature=q2YFcNKjHOjBB7OByd7zBxz3yJE%3D">城市夜景 3</option>
-                                <option value="https://p3-doubao-search-sign.byteimg.com/labis/7950657a1db41f5d4e8c575c72faf9e5~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&amp;x-expires=1778561072&amp;x-signature=gX9YEcrT39kE5lrjgbfCgtrBsOU%3D">现代办公室 1</option>
-                                <option value="https://p3-doubao-search-sign.byteimg.com/labis/7a4fd9650797b0fb0e93591e14fa9bd5~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&amp;x-expires=1778561072&amp;x-signature=%2B8UOOX1tnwJsjW%2FLTqr0gWqTqHY%3D">现代办公室 2</option>
-                                <option value="https://p11-doubao-search-sign.byteimg.com/labis/07893f1d7e72a23eb8c1ed6e1a3f4220~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&amp;x-expires=1778561071&amp;x-signature=4JulphjbLyf1ns9%2FyF1%2BaE2YWiw%3D">商务背景</option>
+                            <label class="block text-sm opacity-80 mb-1">数据刷新频率</label>
+                            <select v-model="config.refreshInterval" 
+                                    class="w-full bg-gray-800 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="100">每0.1秒</option>
+                                <option value="500">每0.5秒</option>
+                                <option value="1000">每1秒</option>
+                                <option value="2000">每2秒</option>
+                                <option value="5000">每5秒</option>
                             </select>
                         </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium mb-1">背景透明度</label>
-                            <div class="relative">
-                                <input type="range" id="background-opacity" min="0" max="100" value="80" class="w-full appearance-none bg-transparent [&amp;::-webkit-slider-runnable-track]:slider-track [&amp;::-webkit-slider-thumb]:slider-thumb [&amp;::-webkit-slider-thumb]:appearance-none [&amp;::-webkit-slider-thumb]:-mt-6">
-                                <div class="flex justify-between mt-1 text-sm text-white/80">
-                                    <span>0%</span>
-                                    <span id="background-opacity-value">80%</span>
-                                    <span>100%</span>
+                    </div>
+
+                    <!-- 计算方式 -->
+                    <div class="mb-6">
+                        <h4 class="font-semibold mb-3">计算方式</h4>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" v-model="config.useActualMonthDays" 
+                                   class="w-4 h-4 text-blue-600 bg-gray-800 rounded focus:ring-blue-500">
+                            <span>按实际自然月天数计算</span>
+                        </label>
+                    </div>
+
+                    <!-- 主题设置 -->
+                    <div class="mb-6">
+                        <h4 class="font-semibold mb-3">主题设置</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm opacity-80 mb-1">主题颜色</label>
+                                <input type="color" v-model="settings.themeColor" 
+                                       class="w-full h-10 bg-gray-800 rounded cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="block text-sm opacity-80 mb-1">页面透明度</label>
+                                <input type="range" min="0" max="100" v-model.number="settings.pageOpacity" 
+                                       class="w-full">
+                                <div class="text-center text-sm opacity-60">{{ settings.pageOpacity }}%</div>
+                            </div>
+                            <div>
+                                <label class="block text-sm opacity-80 mb-1">壁纸设置</label>
+                                <div class="space-y-2">
+                                    <button style="display:none" @click="loadRandomWallpaper" 
+                                            class="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded transition">
+                                        <i class="fas fa-image mr-2"></i>随机壁纸
+                                    </button>
+                                    <input type="text" v-model="settings.wallpaperUrl" 
+                                           placeholder="或输入壁纸URL"
+                                           class="w-full bg-gray-800 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <div v-if="settings.wallpaperUrl">
+                                        <label class="block text-sm opacity-80 mb-1">模糊度</label>
+                                        <input type="range" min="0" max="20" v-model.number="settings.wallpaperBlur" 
+                                               class="w-full">
+                                        <div class="text-center text-sm opacity-60">{{ settings.wallpaperBlur }}px</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium mb-1">背景模糊度</label>
-                            <div class="relative">
-                                <input type="range" id="background-blur" min="0" max="20" value="8" step="1" class="w-full appearance-none bg-transparent [&amp;::-webkit-slider-runnable-track]:slider-track [&amp;::-webkit-slider-thumb]:slider-thumb [&amp;::-webkit-slider-thumb]:appearance-none [&amp;::-webkit-slider-thumb]:-mt-6">
-                                <div class="flex justify-between mt-1 text-sm text-white/80">
-                                    <span>0px</span>
-                                    <span id="background-blur-value">8px</span>
-                                    <span>20px</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium mb-1">主色调</label>
-                            <div class="grid grid-cols-6 gap-2">
-                                <button class="color-option w-full aspect-square rounded-full bg-blue-600 border-2 border-white" data-color="from-blue-600 to-orange-500"></button>
-                                <button class="color-option w-full aspect-square rounded-full bg-purple-600 border-2 border-white" data-color="from-purple-600 to-pink-500"></button>
-                                <button class="color-option w-full aspect-square rounded-full bg-green-600 border-2 border-white" data-color="from-green-600 to-teal-500"></button>
-                                <button class="color-option w-full aspect-square rounded-full bg-red-600 border-2 border-white" data-color="from-red-600 to-yellow-500"></button>
-                                <button class="color-option w-full aspect-square rounded-full bg-gray-800 border-2 border-white" data-color="from-gray-800 to-gray-900"></button>
-                                <button class="color-option w-full aspect-square rounded-full bg-gradient-to-r from-blue-600 to-purple-600 border-2 border-white" data-color="from-blue-600 to-purple-600"></button>
-                            </div>
-                        </div>
+                    </div>
+
+                    <!-- 数据重置 -->
+                    <div class="pt-4 border-t border-gray-700">
+                        <button @click="resetConfig" 
+                                class="w-full bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition">
+                            <i class="fas fa-redo mr-2"></i>重置所有设置
+                        </button>
                     </div>
                 </div>
-            </div>
-            
-            <!-- 中间和右侧内容区 -->
-            <div class="lg:col-span-2 space-y-6">
-                <!-- 收入展示卡片 -->
-                <div class="glass-effect rounded-xl p-6 card-hover">
-                    <div class="text-center mb-4">
-                        <h2 class="text-xl font-semibold flex items-center justify-center">
-                            今日收入
-                            <span id="info-icon" class="ml-2 inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/20 hover:bg-white/30 cursor-pointer transition-colors" title="查看计算说明">
-                                <i class="fa fa-question text-xs"></i>
-                            </span>
-                            <div id="calculation-info" class="absolute mt-2 p-3 bg-white/90 text-dark rounded-lg shadow-lg max-w-xs z-10 opacity-0 invisible transition-all duration-300">
-                                <p class="text-sm font-medium mb-2">今日收入计算说明</p>
-                                <p class="text-xs mb-1">月薪: <span id="info-monthly-salary">10000</span>元</p>
-                                <p class="text-xs mb-1">每月工作天数: <span id="info-work-days">21.75</span>天 <span id="natural-month-note">(已排除周六日)</span></p>
-                                <p class="text-xs mb-1">每日工作小时: <span id="info-work-hours">8</span>小时</p>
-                                <p class="text-xs mb-1">午休时间: <span id="info-lunch-time">1</span>小时</p>
-                                <p class="text-xs mb-2">------------------------</p>
-                                <p class="text-xs mb-1">时薪 = 月薪 ÷ (每月工作天数 × 每日工作小时)</p>
-                                <p class="text-xs mb-1">时薪 = <span id="info-hourly-rate">46.30</span>元/小时</p>
-                                <p class="text-xs mb-1">今日收入 = 时薪 × 实际工作小时</p>
-                            </div>
-                        </h2>
-                        <p class="text-white/70" id="current-date">2025年7月21日 星期一</p>
-                    </div>
-                    
-                    <div class="flex flex-col items-center justify-center py-8">
-                        <div id="lunch-status" class="mb-4 text-center hidden">
-                            <div class="inline-block bg-yellow-500 text-white px-4 py-2 rounded-full animate-pulse">
-                                <i class="fa fa-coffee mr-2"></i>
-                                <span>午休时间，收入暂停增长</span>
-                            </div>
-                        </div>
-                        <div class="text-7xl font-bold mb-2 income-counter" id="daily-income">¥0.00</div>
-                        <div class="text-xl text-white/80 mb-6">当前工作时长: <span id="current-work-hours">0小时0分钟</span></div>
-                        
-                        <div class="grid grid-cols-3 gap-6 w-full max-w-md">
-                            <div class="text-center">
-                                <div class="text-2xl font-bold mb-1 income-counter" id="hourly-income">¥0.00</div>
-                                <div class="text-sm text-white/70">每小时</div>
-                            </div>
-                            
-                            <div class="text-center">
-                                <div class="text-2xl font-bold mb-1 income-counter" id="minute-income">¥0.00</div>
-                                <div class="text-sm text-white/70">每分钟</div>
-                            </div>
-                            
-                            <div class="text-center">
-                                <div class="text-2xl font-bold mb-1 income-counter" id="second-income">¥0.00</div>
-                                <div class="text-sm text-white/70">每秒</div>
-                            </div>
-                        </div>
-                    </div>
+            </aside>
+
+            <!-- Tooltip -->
+            <div v-if="showTooltipContent" class="tooltip" :style="tooltipStyle">
+                <div class="font-semibold mb-2">计算公式：</div>
+                <div class="text-sm space-y-1">
+                    <div>已工作时长: {{ workedMinutesToday.toFixed(1) }} 分钟</div>
+                    <div>时薪: ¥{{ formatNumber(hourlyIncome) }}</div>
+                    <div>今日收入: {{ workedMinutesToday.toFixed(1) }} ÷ 60 × ¥{{ formatNumber(hourlyIncome) }}</div>
+                    <div>= ¥{{ formatNumber(currentDayIncome) }}</div>
                 </div>
-                
-                
-                
-                <!-- 收入概览卡片 -->
-                <div class="glass-effect rounded-xl p-6 card-hover">
-                    <h2 class="text-xl font-semibold mb-4 flex items-center">
-                        <i class="fa fa-pie-chart mr-2 text-secondary"></i>
-                        收入概览
-                    </h2>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-white/10 rounded-lg p-4">
-                            <div class="text-sm text-white/70 mb-1">本月预计收入</div>
-                            <div class="text-3xl font-bold income-counter" id="monthly-estimate">¥0.00</div>
-                        </div>
-                        
-                        <div class="bg-white/10 rounded-lg p-4">
-                            <div class="text-sm text-white/70 mb-1">本周预计收入</div>
-                            <div class="text-3xl font-bold income-counter" id="weekly-estimate">¥0.00</div>
-                        </div>
-                        
-                        <div class="bg-white/10 rounded-lg p-4">
-                            <div class="text-sm text-white/70 mb-1">今日预计收入</div>
-                            <div class="text-3xl font-bold income-counter" id="daily-estimate">¥0.00</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-        
-        <!-- 底部信息 -->
-        <footer class="mt-12 text-center text-white/60 text-sm">
-            <p>打工人收入展示 © 2025 | 数据仅供参考，实际收入以工资单为准</p>
-        </footer>
-    </div>
-    
-    <!-- 设置弹窗 -->
-    <div id="settings-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-        <div class="relative bg-white rounded-xl p-6 max-w-md w-full mx-4 text-dark">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold">更多设置</h3>
-                <button id="close-settings" class="text-gray-500 hover:text-gray-700">
-                    <i class="fa fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">数据刷新频率 (秒)</label>
-                    <input type="number" id="refresh-rate" min="1" max="60" value="1" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium mb-1">显示格式</label>
-                    <select id="display-format" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
-                        <option value="currency">货币格式 (¥1,234.56)</option>
-                        <option value="number">数字格式 (1234.56)</option>
-                    </select>
-                </div>
-                
-                <div class="flex items-center justify-between">
-                    <label class="text-sm font-medium">显示动画效果</label>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="animation-toggle" checked="">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                
-                <div class="flex items-center justify-between">
-                    <label class="text-sm font-medium">显示提示信息</label>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="tooltip-toggle" checked="">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-            </div>
-            
-            <div class="mt-6 flex justify-end space-x-3">
-                <button id="reset-settings" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100">
-                    重置
-                </button>
-                <button id="save-settings" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
-                    保存
-                </button>
             </div>
         </div>
     </div>
-    
-    <!-- 提示信息 -->
-    <div id="tooltip" class="fixed bottom-4 right-4 bg-white/90 text-dark px-4 py-2 rounded-lg shadow-lg hidden">
-        <p id="tooltip-text">提示信息</p>
-    </div>
-    
+
     <script>
-        // 全局变量
-        let animationFrameId;
-        let lastUpdateTime = 0;
-        let refreshRate = 1000; // 默认1秒刷新一次
-        
-        // 配置数据
-        const config = {
-            monthlySalary: 10000,
-            workDaysPerWeek: 5,
-            workHoursPerDay: 8,
-            workStartTime: '09:00',
-            workEndTime: '18:00',
-            lunchStartTime: '12:00',
-            lunchEndTime: '13:00',
-            naturalMonth: false,
-            backgroundImage: 'https://p11-doubao-search-sign.byteimg.com/labis/f2dd97fed4454a7f2b9a8506f98d64d9~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&x-expires=1778561071&x-signature=KVuncWJxLvTCkJJVSK16wPd%2FQwY%3D',
-            backgroundOpacity: 0.8,
-            backgroundBlur: 8,
-            themeGradient: 'from-primary to-secondary',
-            displayFormat: 'currency',
-            showAnimation: true,
-            showTooltip: true
-        };
-        
-        // 收入数据
-        const incomeData = {
-            hourly: 0,
-            minute: 0,
-            second: 0,
-            daily: 0,
-            weekly: 0,
-            monthly: 0
-        };
-        
-        // DOM 元素
-        const elements = {
-            monthlySalary: document.getElementById('monthly-salary'),
-            workDaysPerWeek: document.getElementById('work-days-per-week'),
-            workHoursPerDay: document.getElementById('work-hours-per-day'),
-            workStartTime: document.getElementById('work-start-time'),
-            workEndTime: document.getElementById('work-end-time'),
-            lunchStartTime: document.getElementById('lunch-start-time'),
-            lunchEndTime: document.getElementById('lunch-end-time'),
-            lunchStatus: document.getElementById('lunch-status'),
-            naturalMonthToggle: document.getElementById('natural-month-toggle'),
-            backgroundSelect: document.getElementById('background-select'),
-            backgroundOpacity: document.getElementById('background-opacity'),
-            backgroundOpacityValue: document.getElementById('background-opacity-value'),
-            backgroundBlur: document.getElementById('background-blur'),
-            backgroundBlurValue: document.getElementById('background-blur-value'),
-            colorOptions: document.querySelectorAll('.color-option'),
-            themeToggle: document.getElementById('theme-toggle'),
-            settingsButton: document.getElementById('settings-button'),
-            settingsModal: document.getElementById('settings-modal'),
-            closeSettings: document.getElementById('close-settings'),
-            saveSettings: document.getElementById('save-settings'),
-            resetSettings: document.getElementById('reset-settings'),
-            refreshRate: document.getElementById('refresh-rate'),
-            displayFormat: document.getElementById('display-format'),
-            animationToggle: document.getElementById('animation-toggle'),
-            tooltipToggle: document.getElementById('tooltip-toggle'),
-            tooltip: document.getElementById('tooltip'),
-            tooltipText: document.getElementById('tooltip-text'),
-            currentDate: document.getElementById('current-date'),
-            dailyIncome: document.getElementById('daily-income'),
-            currentWorkHours: document.getElementById('current-work-hours'),
-            hourlyIncome: document.getElementById('hourly-income'),
-            minuteIncome: document.getElementById('minute-income'),
-            secondIncome: document.getElementById('second-income'),
-            monthlyEstimate: document.getElementById('monthly-estimate'),
-            weeklyEstimate: document.getElementById('weekly-estimate'),
-            dailyEstimate: document.getElementById('daily-estimate'),
-            backgroundImage: document.getElementById('background-image'),
-            backgroundBlurElement: document.getElementById('background-blur'),
-            infoIcon: document.getElementById('info-icon')
-        };
-        
-        // 初始化函数
-        function init() {
-            // 设置当前日期
-            updateCurrentDate();
-            
-            // 初始化事件监听
-            initEventListeners();
-            
-            // 加载配置
-            loadConfig();
-            
-            // 应用配置
-            applyConfig();
-            
-            // 计算初始收入
-            calculateIncome();
-            
-            // 更新计算说明信息
-            updateCalculationInfo();
-            
-            // 开始动画循环
-            startAnimationLoop();
-            
-            // 显示欢迎提示
-            showTooltip('欢迎使用打工人收入展示！调整左侧配置查看实时收入变化。');
-        }
-        
-        // 更新当前日期
-        function updateCurrentDate() {
-            const now = new Date();
-            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-            elements.currentDate.textContent = now.toLocaleDateString('zh-CN', options);
-        }
-        
-        
-        
-        // 初始化事件监听
-        function initEventListeners() {
-            // 收入配置
-            elements.monthlySalary.addEventListener('change', function() {
-                const value = parseInt(this.value) || 0;
-                config.monthlySalary = value;
-                calculateIncome();
-                updateCalculationInfo();
-                saveConfig();
-            });
-            
-            elements.workDaysPerWeek.addEventListener('change', function() {
-                config.workDaysPerWeek = parseInt(this.value);
-                calculateIncome();
-                updateCalculationInfo();
-                saveConfig();
-            });
-            
-            elements.workHoursPerDay.addEventListener('change', function() {
-                config.workHoursPerDay = parseFloat(this.value);
-                calculateIncome();
-                updateCalculationInfo();
-                saveConfig();
-            });
-            
-            elements.workStartTime.addEventListener('change', function() {
-                config.workStartTime = this.value;
-                calculateIncome();
-                updateCalculationInfo();
-                saveConfig();
-            });
-            
-            elements.workEndTime.addEventListener('change', function() {
-                config.workEndTime = this.value;
-                calculateIncome();
-                updateCalculationInfo();
-                saveConfig();
-            });
-            
-            elements.lunchStartTime.addEventListener('change', function() {
-                config.lunchStartTime = this.value;
-                calculateIncome();
-                updateCalculationInfo();
-                saveConfig();
-            });
-            
-            elements.lunchEndTime.addEventListener('change', function() {
-                config.lunchEndTime = this.value;
-                calculateIncome();
-                updateCalculationInfo();
-                saveConfig();
-            });
-            
-            elements.naturalMonthToggle.addEventListener('change', function() {
-                config.naturalMonth = this.checked;
-                calculateIncome();
-                updateCalculationInfo();
-                saveConfig();
-            });
-            
-            // 主题配置
-            elements.backgroundSelect.addEventListener('change', function() {
-                config.backgroundImage = this.value;
-                applyBackground();
-                saveConfig();
-            });
-            
-            elements.backgroundOpacity.addEventListener('input', function() {
-                const value = parseInt(this.value);
-                elements.backgroundOpacityValue.textContent = value + '%';
-                config.backgroundOpacity = value / 100;
-                applyBackground();
-                saveConfig();
-            });
-            
-            elements.backgroundBlur.addEventListener('input', function() {
-                const value = parseInt(this.value);
-                elements.backgroundBlurValue.textContent = value + 'px';
-                config.backgroundBlur = value;
-                applyBackground();
-                saveConfig();
-            });
-            
-            // 颜色选项
-            elements.colorOptions.forEach(option => {
-                option.addEventListener('click', function() {
-                    config.themeGradient = this.dataset.color;
-                    applyTheme();
-                    saveConfig();
-                    
-                    // 更新选中状态
-                    elements.colorOptions.forEach(opt => opt.classList.remove('ring-2', 'ring-white'));
-                    this.classList.add('ring-2', 'ring-white');
-                });
-            });
-            
-            // 主题切换
-            elements.themeToggle.addEventListener('click', function() {
-                document.body.classList.toggle('dark-theme');
-                const icon = this.querySelector('i');
-                if (icon.classList.contains('fa-moon-o')) {
-                    icon.classList.remove('fa-moon-o');
-                    icon.classList.add('fa-sun-o');
-                } else {
-                    icon.classList.remove('fa-sun-o');
-                    icon.classList.add('fa-moon-o');
-                }
-            });
-            
-            // 设置弹窗
-            elements.settingsButton.addEventListener('click', function() {
-                elements.settingsModal.classList.remove('hidden');
-            });
-            
-            elements.closeSettings.addEventListener('click', function() {
-                elements.settingsModal.classList.add('hidden');
-            });
-            
-            elements.saveSettings.addEventListener('click', function() {
-                config.refreshRate = parseInt(elements.refreshRate.value) * 1000;
-                config.displayFormat = elements.displayFormat.value;
-                config.showAnimation = elements.animationToggle.checked;
-                config.showTooltip = elements.tooltipToggle.checked;
-                
-                refreshRate = config.refreshRate;
-                
-                elements.settingsModal.classList.add('hidden');
-                saveConfig();
-                calculateIncome();
-                
-                showTooltip('设置已保存！');
-            });
-            
-            elements.resetSettings.addEventListener('click', function() {
-                resetConfig();
-                loadConfig();
-                applyConfig();
-                calculateIncome();
-                updateCalculationInfo();
-                
-                showTooltip('设置已重置！');
-            });
-            
-            // 点击弹窗外部关闭
-            elements.settingsModal.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    this.classList.add('hidden');
-                }
-            });
-            
-            // 计算说明提示框
-            elements.infoIcon.addEventListener('click', function(e) {
-                e.stopPropagation(); // 阻止事件冒泡
-                const calculationInfo = document.getElementById('calculation-info');
-                calculationInfo.classList.toggle('show');
-                
-                // 如果显示了提示框，添加全局点击事件来关闭
-                if (calculationInfo.classList.contains('show')) {
-                    // 先移除之前可能存在的事件监听
-                    document.removeEventListener('click', closeTooltip);
-                    
-                    // 添加新的事件监听
-                    document.addEventListener('click', closeTooltip);
-                }
-            });
-            
-            // 点击提示框内部不关闭
-            document.getElementById('calculation-info').addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
-            
-            // 关闭提示框的函数
-            function closeTooltip(e) {
-                const calculationInfo = document.getElementById('calculation-info');
-                if (calculationInfo && calculationInfo.classList.contains('show')) {
-                    calculationInfo.classList.remove('show');
-                    document.removeEventListener('click', closeTooltip);
-                }
-            }
-        }
-        
-        // 加载配置
-        function loadConfig() {
-            const savedConfig = localStorage.getItem('workerIncomeConfig');
-            if (savedConfig) {
-                const parsedConfig = JSON.parse(savedConfig);
-                Object.assign(config, parsedConfig);
-            }
-        }
-        
-        // 保存配置
-        function saveConfig() {
-            localStorage.setItem('workerIncomeConfig', JSON.stringify(config));
-        }
-        
-        // 重置配置
-        function resetConfig() {
-            localStorage.removeItem('workerIncomeConfig');
-            
-            // 重置为默认值
-            config.monthlySalary = 10000;
-            config.workDaysPerWeek = 5;
-            config.workHoursPerDay = 8;
-            config.workStartTime = '09:00';
-            config.workEndTime = '18:00';
-            config.lunchStartTime = '12:00';
-            config.lunchEndTime = '13:00';
-            config.naturalMonth = false;
-            config.backgroundImage = 'https://p11-doubao-search-sign.byteimg.com/labis/f2dd97fed4454a7f2b9a8506f98d64d9~tplv-be4g95zd3a-image.jpeg?rk3s=542c0f93&x-expires=1778561071&x-signature=KVuncWJxLvTCkJJVSK16wPd%2FQwY%3D';
-            config.backgroundOpacity = 0.8;
-            config.backgroundBlur = 8;
-            config.themeGradient = 'from-primary to-secondary';
-            config.refreshRate = 1000;
-            config.displayFormat = 'currency';
-            config.showAnimation = true;
-            config.showTooltip = true;
-        }
-        
-        // 应用配置
-        function applyConfig() {
-            // 收入配置
-            elements.monthlySalary.value = config.monthlySalary;
-            elements.workDaysPerWeek.value = config.workDaysPerWeek;
-            elements.workHoursPerDay.value = config.workHoursPerDay;
-            elements.workStartTime.value = config.workStartTime;
-            elements.workEndTime.value = config.workEndTime;
-            elements.lunchStartTime.value = config.lunchStartTime;
-            elements.lunchEndTime.value = config.lunchEndTime;
-            elements.naturalMonthToggle.checked = config.naturalMonth;
-            
-            // 主题配置
-            elements.backgroundSelect.value = config.backgroundImage;
-            elements.backgroundOpacity.value = config.backgroundOpacity * 100;
-            elements.backgroundOpacityValue.textContent = (config.backgroundOpacity * 100) + '%';
-            elements.backgroundBlur.value = config.backgroundBlur;
-            elements.backgroundBlurValue.textContent = config.backgroundBlur + 'px';
-            
-            // 设置弹窗
-            elements.refreshRate.value = config.refreshRate / 1000;
-            elements.displayFormat.value = config.displayFormat;
-            elements.animationToggle.checked = config.showAnimation;
-            elements.tooltipToggle.checked = config.showTooltip;
-            
-            // 应用背景和主题
-            applyBackground();
-            applyTheme();
-        }
-        
-        // 应用背景
-        function applyBackground() {
-            elements.backgroundImage.style.backgroundImage = `url('${config.backgroundImage}')`;
-            elements.backgroundImage.style.opacity = config.backgroundOpacity;
-            elements.backgroundBlurElement.style.setProperty('--bg-blur', config.backgroundBlur + 'px');
-        }
-        
-        // 应用主题
-        function applyTheme() {
-            document.body.style.background = `linear-gradient(to bottom right, var(${config.themeGradient.split(' ')[0]}), var(${config.themeGradient.split(' ')[1]}))`;
-        }
-        
-        // 计算收入
-        function calculateIncome() {
-            const now = new Date();
-            
-            // 解析工作时间
-            const [startHour, startMinute] = config.workStartTime.split(':').map(Number);
-            const [endHour, endMinute] = config.workEndTime.split(':').map(Number);
-            
-            // 创建工作开始和结束时间对象
-            const workStart = new Date();
-            workStart.setHours(startHour, startMinute, 0, 0);
-            
-            const workEnd = new Date();
-            workEnd.setHours(endHour, endMinute, 0, 0);
-            
-            // 解析午休时间
-            const [lunchStartHour, lunchStartMinute] = config.lunchStartTime.split(':').map(Number);
-            const [lunchEndHour, lunchEndMinute] = config.lunchEndTime.split(':').map(Number);
-            
-            // 创建午休开始和结束时间对象
-            const lunchStart = new Date(workStart);
-            lunchStart.setHours(lunchStartHour, lunchStartMinute, 0, 0);
-            
-            const lunchEnd = new Date(workStart);
-            lunchEnd.setHours(lunchEndHour, lunchEndMinute, 0, 0);
-            
-            // 计算每月工作天数
-            let workDaysPerMonth;
-            if (config.naturalMonth) {
-                // 自然月工作日天数（排除周六和周日）
-                const year = now.getFullYear();
-                const month = now.getMonth();
-                workDaysPerMonth = getWorkingDaysInMonth(year, month);
-            } else {
-                // 标准工作日计算 (每月约22个工作日)
-                workDaysPerMonth = config.workDaysPerWeek * 4.33;
-            }
-            
-            // 计算时薪
-            const monthlyWorkHours = workDaysPerMonth * config.workHoursPerDay;
-            incomeData.hourly = config.monthlySalary / monthlyWorkHours;
-            
-            // 计算分薪和秒薪
-            incomeData.minute = incomeData.hourly / 60;
-            incomeData.second = incomeData.minute / 60;
-            
-            // 计算今日工作时长和收入
-            let workMinutesToday = 0;
-            
-            // 检查是否在工作时间内
-            if (now >= workStart && now <= workEnd) {
-                // 检查是否在午休时间内
-                if (now >= lunchStart && now <= lunchEnd) {
-                    // 午休时间不计入工作时间
-                    workMinutesToday = (lunchStart - workStart) / (1000 * 60);
-                    
-                    // 显示午休状态
-                    elements.lunchStatus.classList.remove('hidden');
-                } else {
-                    // 隐藏午休状态
-                    elements.lunchStatus.classList.add('hidden');
-                    
-                    // 计算从上班到现在的时间
-                    const minutesSinceStart = (now - workStart) / (1000 * 60);
-                    
-                    // 计算午休时长（分钟）
-                    const lunchDuration = (lunchEnd - lunchStart) / (1000 * 60);
-                    
-                    if (now < lunchStart) {
-                        workMinutesToday = minutesSinceStart;
-                    } else {
-                        workMinutesToday = minutesSinceStart - lunchDuration;
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    showSettings: false,
+                    currentTime: new Date(),
+                    showTooltipContent: false,
+                    tooltipStyle: { top: '0px', left: '0px' },
+                    updateTimer: null,
+                    config: {
+                        monthlySalary: 15000,
+                        workDaysPerWeek: 5,
+                        dailyWorkHours: 8,
+                        workStartTime: '09:00',
+                        workEndTime: '18:00',
+                        lunchStartTime: '12:00',
+                        lunchEndTime: '13:00',
+                        refreshInterval: 1000,
+                        useActualMonthDays: true
+                    },
+                    settings: {
+                        themeColor: '#1e40af',
+                        pageOpacity: 0.8,
+                        wallpaperUrl: '',
+                        wallpaperBlur: 5
                     }
                 }
-            } else if (now > workEnd) {
-                // 已经下班，计算全天工作时间
-                workMinutesToday = config.workHoursPerDay * 60;
-            }
-            
-            // 计算今日收入
-            incomeData.daily = workMinutesToday * incomeData.minute;
-            
-            // 计算本周和本月预计收入
-            incomeData.weekly = incomeData.daily * config.workDaysPerWeek;
-            incomeData.monthly = config.monthlySalary;
-            
-            // 更新UI
-            updateUI();
-        }
-        
-        
-        
-        // 更新UI
-        function updateUI() {
-            // 格式化收入数据
-            const dailyFormatted = formatIncome(incomeData.daily);
-            const hourlyFormatted = formatIncome(incomeData.hourly);
-            const minuteFormatted = formatIncome(incomeData.minute);
-            const secondFormatted = formatIncome(incomeData.second);
-            const weeklyFormatted = formatIncome(incomeData.weekly);
-            const monthlyFormatted = formatIncome(incomeData.monthly);
-            
-            // 更新收入显示
-            elements.dailyIncome.textContent = dailyFormatted;
-            elements.hourlyIncome.textContent = hourlyFormatted;
-            elements.minuteIncome.textContent = minuteFormatted;
-            elements.secondIncome.textContent = secondFormatted;
-            elements.weeklyEstimate.textContent = weeklyFormatted;
-            elements.monthlyEstimate.textContent = monthlyFormatted;
-            
-            // 更新工作时长显示
-            const workHours = Math.floor(incomeData.daily / incomeData.hourly);
-            const workMinutes = Math.floor((incomeData.daily % incomeData.hourly) / incomeData.minute);
-            elements.currentWorkHours.textContent = `${workHours}小时${workMinutes}分钟`;
-            
-            // 计算今日预计收入
-            const dailyEstimate = incomeData.hourly * config.workHoursPerDay;
-            const dailyEstimateFormatted = formatIncome(dailyEstimate);
-            elements.dailyEstimate.textContent = dailyEstimateFormatted;
-            
-            // 添加动画效果
-            if (config.showAnimation) {
-                [elements.dailyIncome, elements.hourlyIncome, elements.minuteIncome, elements.secondIncome, 
-                 elements.weeklyEstimate, elements.monthlyEstimate, elements.dailyEstimate].forEach(element => {
-                    element.classList.add('animate-pulse-slow');
-                    setTimeout(() => {
-                        element.classList.remove('animate-pulse-slow');
-                    }, 1000);
-                });
-            }
-        }
-        
-        // 格式化收入
-        function formatIncome(value) {
-            if (config.displayFormat === 'currency') {
-                return '¥' + value.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
-            } else {
-                return value.toFixed(2);
-            }
-        }
-        
-        // 格式化数字
-        function formatNumber(value) {
-            return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        }
-        
-        // 计算两个时间之间的小时差
-        function calculateTimeDifference(startTime, endTime) {
-            const [startHour, startMinute] = startTime.split(':').map(Number);
-            const [endHour, endMinute] = endTime.split(':').map(Number);
-            
-            const startTotalMinutes = startHour * 60 + startMinute;
-            const endTotalMinutes = endHour * 60 + endMinute;
-            
-            return (endTotalMinutes - startTotalMinutes) / 60;
-        }
-        
-        // 计算自然月中的工作日天数（排除周六和周日）
-        function getWorkingDaysInMonth(year, month) {
-            let workingDays = 0;
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            
-            for (let day = 1; day <= daysInMonth; day++) {
-                const date = new Date(year, month, day);
-                const dayOfWeek = date.getDay();
-                
-                // 排除周六（6）和周日（0）
-                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-                    workingDays++;
+            },
+            computed: {
+                backgroundStyle() {
+                    if (this.settings.wallpaperUrl) {
+                        return {};
+                    }
+                    return {
+                        background: this.settings.themeColor,
+                        transition: 'background 0.5s ease'
+                    };
+                },
+                workHoursPerDay() {
+                    const [lunchStartHour, lunchStartMin] = this.config.lunchStartTime.split(':').map(Number);
+                    const [lunchEndHour, lunchEndMin] = this.config.lunchEndTime.split(':').map(Number);
+                    const lunchMinutes = (lunchEndHour * 60 + lunchEndMin) - (lunchStartHour * 60 + lunchStartMin);
+                    return this.config.dailyWorkHours - (lunchMinutes / 60);
+                },
+                workDaysPerMonth() {
+                    if (this.config.useActualMonthDays) {
+                        const year = this.currentTime.getFullYear();
+                        const month = this.currentTime.getMonth();
+                        const firstDay = new Date(year, month, 1);
+                        const lastDay = new Date(year, month + 1, 0);
+                        let workDays = 0;
+                        
+                        for (let day = 1; day <= lastDay.getDate(); day++) {
+                            const date = new Date(year, month, day);
+                            const dayOfWeek = date.getDay();
+                            if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 排除周末
+                                workDays++;
+                            }
+                        }
+                        return workDays;
+                    }
+                    return Math.floor(30.42 * this.config.workDaysPerWeek / 7);
+                },
+                dailyIncome() {
+                    return this.config.monthlySalary / this.workDaysPerMonth;
+                },
+                hourlyIncome() {
+                    return this.dailyIncome / this.workHoursPerDay;
+                },
+                perSecondIncome() {
+                    return this.hourlyIncome / 3600;
+                },
+                perMinuteIncome() {
+                    return this.hourlyIncome / 60;
+                },
+                perHourIncome() {
+                    return this.hourlyIncome;
+                },
+                isOnBreak() {
+                    const now = this.currentTime;
+                    const currentMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+                    const [lunchStartHour, lunchStartMin] = this.config.lunchStartTime.split(':').map(Number);
+                    const [lunchEndHour, lunchEndMin] = this.config.lunchEndTime.split(':').map(Number);
+                    const lunchStartMinutes = lunchStartHour * 60 + lunchStartMin;
+                    const lunchEndMinutes = lunchEndHour * 60 + lunchEndMin;
+                    
+                    const dayOfWeek = now.getDay();
+                    if (dayOfWeek === 0 || dayOfWeek === 6) return false;
+                    
+                    return currentMinutes >= lunchStartMinutes && currentMinutes < lunchEndMinutes;
+                },
+                isWorkingTime() {
+                    if (this.isOnBreak) return false;
+                    
+                    const now = this.currentTime;
+                    const [workStartHour, workStartMin] = this.config.workStartTime.split(':').map(Number);
+                    const [workEndHour, workEndMin] = this.config.workEndTime.split(':').map(Number);
+                    
+                    // 包含秒数，确保每秒都能更新计算结果
+                    const currentMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+                    const workStartMinutes = workStartHour * 60 + workStartMin;
+                    const workEndMinutes = workEndHour * 60 + workEndMin;
+                    
+                    const dayOfWeek = now.getDay();
+                    if (dayOfWeek === 0 || dayOfWeek === 6) return false;
+                    
+                    return currentMinutes >= workStartMinutes && currentMinutes < workEndMinutes;
+                },
+                isBeforeWork() {
+                    const now = this.currentTime;
+                    const [workStartHour, workStartMin] = this.config.workStartTime.split(':').map(Number);
+                    const currentMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+                    const workStartMinutes = workStartHour * 60 + workStartMin;
+                    
+                    const dayOfWeek = now.getDay();
+                    if (dayOfWeek === 0 || dayOfWeek === 6) return false;
+                    
+                    return currentMinutes < workStartMinutes;
+                },
+                workedMinutesToday() {
+                    if (!this.isWorkingTime && !this.isBeforeWork) {
+                        return this.workHoursPerDay * 60;
+                    }
+                    if (!this.isWorkingTime && this.isBeforeWork) {
+                        return 0;
+                    }
+                    
+                    const now = this.currentTime;
+                    const [workStartHour, workStartMin] = this.config.workStartTime.split(':').map(Number);
+                    const [lunchStartHour, lunchStartMin] = this.config.lunchStartTime.split(':').map(Number);
+                    const [lunchEndHour, lunchEndMin] = this.config.lunchEndTime.split(':').map(Number);
+                    
+                    // 包含秒数，确保每秒都能更新计算结果
+                    const currentMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+                    const workStartMinutes = workStartHour * 60 + workStartMin;
+                    const lunchStartMinutes = lunchStartHour * 60 + lunchStartMin;
+                    const lunchEndMinutes = lunchEndHour * 60 + lunchEndMin;
+                    
+                    let workedMinutes = 0;
+                    if (currentMinutes <= lunchStartMinutes) {
+                        workedMinutes = currentMinutes - workStartMinutes;
+                    } else {
+                        workedMinutes = (lunchStartMinutes - workStartMinutes) + (currentMinutes - lunchEndMinutes);
+                    }
+                    
+                    return workedMinutes;
+                },
+                workProgress() {
+                    const totalWorkMinutes = this.workHoursPerDay * 60;
+                    return Math.min((this.workedMinutesToday / totalWorkMinutes) * 100, 100);
+                },
+                currentDayIncome() {
+                    if (!this.isWorkingTime && !this.isBeforeWork) {
+                        return this.hourlyIncome * this.workHoursPerDay;
+                    }
+                    if (!this.isWorkingTime && this.isBeforeWork) {
+                        return 0;
+                    }
+                    
+                    const workedHours = this.workedMinutesToday / 60;
+                    return workedHours * this.hourlyIncome;
+                },
+                countdownToWorkEnd() {
+                    const [workEndHour, workEndMin] = this.config.workEndTime.split(':').map(Number);
+                    const endTime = new Date();
+                    endTime.setHours(workEndHour, workEndMin, 0, 0);
+                    
+                    const diff = endTime - this.currentTime;
+                    if (diff <= 0) return '已下班';
+                    
+                    const hours = Math.floor(diff / 3600000);
+                    const minutes = Math.floor((diff % 3600000) / 60000);
+                    const seconds = Math.floor((diff % 60000) / 1000);
+                    
+                    return `${hours}时${minutes}分${seconds}秒`;
+                },
+                countdownToBreakEnd() {
+                    const [lunchEndHour, lunchEndMin] = this.config.lunchEndTime.split(':').map(Number);
+                    const endTime = new Date();
+                    endTime.setHours(lunchEndHour, lunchEndMin, 0, 0);
+                    
+                    const diff = endTime - this.currentTime;
+                    if (diff <= 0) return '午休结束';
+                    
+                    const hours = Math.floor(diff / 3600000);
+                    const minutes = Math.floor((diff % 3600000) / 60000);
+                    const seconds = Math.floor((diff % 60000) / 1000);
+                    
+                    return `${hours}时${minutes}分${seconds}秒`;
+                },
+                countdownToWorkStart() {
+                    const [workStartHour, workStartMin] = this.config.workStartTime.split(':').map(Number);
+                    const startTime = new Date();
+                    startTime.setHours(workStartHour, workStartMin, 0, 0);
+                    
+                    const diff = startTime - this.currentTime;
+                    if (diff <= 0) return '已上班';
+                    
+                    const hours = Math.floor(diff / 3600000);
+                    const minutes = Math.floor((diff % 3600000) / 60000);
+                    const seconds = Math.floor((diff % 60000) / 1000);
+                    
+                    return `${hours}时${minutes}分${seconds}秒`;
+                },
+                monthlyEstimatedIncome() {
+                    return this.config.monthlySalary;
+                },
+                workedDaysThisMonth() {
+                    const now = this.currentTime;
+                    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                    let workDays = 0;
+                    
+                    for (let d = startOfMonth; d <= now; d.setDate(d.getDate() + 1)) {
+                        const dayOfWeek = d.getDay();
+                        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                            workDays++;
+                        }
+                    }
+                    
+                    return workDays;
+                },
+                currentMonthIncome() {
+                    return this.workedDaysThisMonth * this.workHoursPerDay * this.hourlyIncome;
+                },
+                remainingToTarget() {
+                    return Math.max(0, this.config.monthlySalary - this.currentMonthIncome);
+                }
+            },
+            methods: {
+                formatNumber(num) {
+                    return new Intl.NumberFormat('zh-CN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }).format(num);
+                },
+                toggleSettings() {
+                    this.showSettings = !this.showSettings;
+                },
+                toggleFullscreen() {
+                    if (!document.fullscreenElement) {
+                        document.documentElement.requestFullscreen();
+                    } else {
+                        document.exitFullscreen();
+                    }
+                },
+                changeTheme() {
+                    const themes = [
+                        '#1e40af', // 蓝色
+                        '#dc2626', // 红色
+                        '#059669', // 绿色
+                        '#7c3aed', // 紫色
+                        '#ea580c', // 橙色
+                        '#0891b2'  // 青色
+                    ];
+                    const currentIndex = themes.indexOf(this.settings.themeColor);
+                    const nextIndex = (currentIndex + 1) % themes.length;
+                    this.settings.themeColor = themes[nextIndex];
+                },
+                loadRandomWallpaper() {
+                    const wallpapers = [
+                        'https://picsum.photos/seed/work1/1920/1080.jpg',
+                        'https://picsum.photos/seed/work2/1920/1080.jpg',
+                        'https://picsum.photos/seed/work3/1920/1080.jpg',
+                        'https://picsum.photos/seed/work4/1920/1080.jpg',
+                        'https://picsum.photos/seed/work5/1920/1080.jpg'
+                    ];
+                    const randomIndex = Math.floor(Math.random() * wallpapers.length);
+                    this.settings.wallpaperUrl = wallpapers[randomIndex];
+                },
+                resetConfig() {
+                    if (confirm('确定要重置所有设置吗？')) {
+                        this.config = {
+                            monthlySalary: 15000,
+                            workDaysPerWeek: 5,
+                            dailyWorkHours: 8,
+                            workStartTime: '09:00',
+                            workEndTime: '18:00',
+                            lunchStartTime: '12:00',
+                            lunchEndTime: '13:00',
+                            refreshInterval: 1000,
+                            useActualMonthDays: true
+                        };
+                        this.settings = {
+                            themeColor: '#1e40af',
+                            pageOpacity: 0.8,
+                            wallpaperUrl: '',
+                            wallpaperBlur: 5
+                        };
+                        this.restartTimer();
+                    }
+                },
+                updateTime() {
+                    // 在Vue 3中直接赋值即可触发响应式更新
+                    this.currentTime = new Date();
+                },
+                restartTimer() {
+                    if (this.updateTimer) {
+                        clearInterval(this.updateTimer);
+                    }
+                    // 使用箭头函数确保this指向正确的Vue实例
+                    this.updateTimer = setInterval(() => this.updateTime(), this.config.refreshInterval);
+                },
+                showTooltip(event) {
+                    const rect = event.target.getBoundingClientRect();
+                    this.tooltipStyle = {
+                        top: `${rect.bottom + 10}px`,
+                        left: `${rect.left - 150}px`
+                    };
+                    this.showTooltipContent = true;
+                },
+                hideTooltip() {
+                    this.showTooltipContent = false;
+                },
+                saveToLocal() {
+                    localStorage.setItem('incomeConfig', JSON.stringify(this.config));
+                    localStorage.setItem('incomeSettings', JSON.stringify(this.settings));
+                },
+                loadFromLocal() {
+                    const savedConfig = localStorage.getItem('incomeConfig');
+                    const savedSettings = localStorage.getItem('incomeSettings');
+                    
+                    if (savedConfig) {
+                        this.config = JSON.parse(savedConfig);
+                    }
+                    if (savedSettings) {
+                        this.settings = JSON.parse(savedSettings);
+                    }
+                }
+            },
+            watch: {
+                config: {
+                    handler(newVal, oldVal) {
+                        this.saveToLocal();
+                        if (newVal.refreshInterval !== oldVal.refreshInterval) {
+                            this.restartTimer();
+                        }
+                    },
+                    deep: true
+                },
+                settings: {
+                    handler() {
+                        this.saveToLocal();
+                    },
+                    deep: true
+                }
+            },
+            mounted() {
+                this.loadFromLocal();
+                this.restartTimer();
+            },
+            beforeUnmount() {
+                if (this.updateTimer) {
+                    clearInterval(this.updateTimer);
                 }
             }
-            
-            return workingDays;
-        }
-        
-        // 开始动画循环
-        function startAnimationLoop() {
-            function animate(timestamp) {
-                if (timestamp - lastUpdateTime > refreshRate) {
-                    calculateIncome();
-                    lastUpdateTime = timestamp;
-                }
-                
-                animationFrameId = requestAnimationFrame(animate);
-            }
-            
-            animationFrameId = requestAnimationFrame(animate);
-        }
-        
-        // 显示提示
-        function showTooltip(text) {
-            if (!config.showTooltip) return;
-            
-            elements.tooltipText.textContent = text;
-            elements.tooltip.classList.remove('hidden');
-            
-            // 3秒后隐藏
-            setTimeout(() => {
-                elements.tooltip.classList.add('hidden');
-            }, 3000);
-        }
-        
-        // 更新计算说明信息
-        function updateCalculationInfo() {
-            // 从配置中获取最新数据，而不是直接从DOM获取
-            const monthlySalary = config.monthlySalary || 0;
-            const workDaysPerWeek = config.workDaysPerWeek || 5;
-            const workHoursPerDay = config.workHoursPerDay || 8;
-            const isNaturalMonth = config.naturalMonth;
-            
-            // 计算每月工作天数
-            let workDaysPerMonth;
-            if (isNaturalMonth) {
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = today.getMonth();
-                workDaysPerMonth = getWorkingDaysInMonth(year, month);
-            } else {
-                workDaysPerMonth = workDaysPerWeek * 4.33;
-            }
-            
-            // 计算午休时间
-            const lunchDuration = calculateTimeDifference(config.lunchStartTime, config.lunchEndTime);
-            
-            // 计算时薪
-            const hourlyRate = monthlySalary / (workDaysPerMonth * workHoursPerDay);
-            
-            // 更新提示框中的信息
-            document.getElementById('info-monthly-salary').textContent = monthlySalary.toLocaleString();
-            document.getElementById('info-work-days').textContent = workDaysPerMonth.toFixed(2);
-            document.getElementById('info-work-hours').textContent = workHoursPerDay.toFixed(1);
-            document.getElementById('info-lunch-time').textContent = lunchDuration.toFixed(1);
-            document.getElementById('info-hourly-rate').textContent = hourlyRate.toFixed(2);
-            
-            // 显示或隐藏"已排除周六日"的说明
-            const naturalMonthNote = document.getElementById('natural-month-note');
-            if (isNaturalMonth) {
-                naturalMonthNote.style.display = 'inline';
-            } else {
-                naturalMonthNote.style.display = 'none';
-            }
-        }
-        
-        // 页面加载完成后初始化
-        document.addEventListener('DOMContentLoaded', init);
+        }).mount('#app');
     </script>
-
-
-</body></html>
+</body>
+</html>
