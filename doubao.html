@@ -800,34 +800,18 @@
             });
             
             // 计算说明提示框
-            elements.infoIcon.addEventListener('click', function(e) {
-                e.stopPropagation(); // 阻止事件冒泡
+            elements.infoIcon.addEventListener('click', function() {
                 const calculationInfo = document.getElementById('calculation-info');
                 calculationInfo.classList.toggle('show');
                 
-                // 如果显示了提示框，添加全局点击事件来关闭
-                if (calculationInfo.classList.contains('show')) {
-                    // 先移除之前可能存在的事件监听
-                    document.removeEventListener('click', closeTooltip);
-                    
-                    // 添加新的事件监听
-                    document.addEventListener('click', closeTooltip);
-                }
+                // 点击其他地方关闭提示框
+                document.addEventListener('click', function closeTooltip(e) {
+                    if (!calculationInfo.contains(e.target) && e.target !== elements.infoIcon) {
+                        calculationInfo.classList.remove('show');
+                        document.removeEventListener('click', closeTooltip);
+                    }
+                });
             });
-            
-            // 点击提示框内部不关闭
-            document.getElementById('calculation-info').addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
-            
-            // 关闭提示框的函数
-            function closeTooltip(e) {
-                const calculationInfo = document.getElementById('calculation-info');
-                if (calculationInfo && calculationInfo.classList.contains('show')) {
-                    calculationInfo.classList.remove('show');
-                    document.removeEventListener('click', closeTooltip);
-                }
-            }
         }
         
         // 加载配置
