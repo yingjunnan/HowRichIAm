@@ -129,6 +129,9 @@
                         class="glass-effect dark-glass px-4 py-2 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition">
                     <i class="fas fa-cog mr-2"></i>设置
                 </button>
+                <div class="glass-effect dark-glass px-4 py-2 rounded-lg text-white text-lg text-center">
+                    <i class="fas fa-clock mr-6"></i>{{ formattedDateTime }}
+                </div>
                 <div class="flex gap-2">
                     <button @click="loadRandomWallpaper"
                             class="glass-effect dark-glass px-4 py-2 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition">
@@ -624,6 +627,17 @@
                 },
                 remainingToTarget() {
                     return Math.max(0, this.config.monthlySalary - this.currentMonthIncome);
+                },
+                formattedDateTime() {
+                    const now = this.currentTime;
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const day = String(now.getDate()).padStart(2, '0');
+                    const hours = String(now.getHours()).padStart(2, '0');
+                    const minutes = String(now.getMinutes()).padStart(2, '0');
+                    const seconds = String(now.getSeconds()).padStart(2, '0');
+
+                    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
                 }
             },
             methods: {
@@ -671,13 +685,11 @@
                     this.settings.themeColor = themes[nextIndex];
                 },
                 loadRandomWallpaper() {
-                    const wallpapers = [
-                        'https://picsum.photos/seed/work1/1920/1080.jpg',
-                        'https://picsum.photos/seed/work2/1920/1080.jpg',
-                        'https://picsum.photos/seed/work3/1920/1080.jpg',
-                        'https://picsum.photos/seed/work4/1920/1080.jpg',
-                        'https://picsum.photos/seed/work5/1920/1080.jpg'
-                    ];
+                    const wallpapers = [];
+                    // 生成work1到work30的壁纸数组
+                    for (let i = 1; i <= 30; i++) {
+                        wallpapers.push(`https://picsum.photos/seed/work${i}/1920/1080.jpg`);
+                    }
                     const randomIndex = Math.floor(Math.random() * wallpapers.length);
                     this.settings.wallpaperUrl = wallpapers[randomIndex];
                 },
