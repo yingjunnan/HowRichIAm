@@ -406,6 +406,7 @@
                     showTooltipContent: false,
                     tooltipStyle: { top: '0px', left: '0px' },
                     updateTimer: null,
+                    isFirstVisit: true,
                     config: {
                         monthlySalary: 15000,
                         workDaysPerWeek: 5,
@@ -415,7 +416,7 @@
                         lunchStartTime: '12:00',
                         lunchEndTime: '13:00',
                         refreshInterval: 1000,
-                        useActualMonthDays: true
+                        useActualMonthDays: false
                     },
                     settings: {
                         themeColor: '#1e40af',
@@ -634,6 +635,20 @@
                 },
                 toggleSettings() {
                     this.showSettings = !this.showSettings;
+                    // 如果是首次访问，关闭提示
+                    if (this.isFirstVisit) {
+                        this.isFirstVisit = false;
+                        this.saveToLocal();
+                    }
+                },
+                showFirstVisitTip() {
+                    // 检查是否是首次访问
+                    if (this.isFirstVisit) {
+                        // 延迟一点时间显示提示，让页面先加载完成
+                        setTimeout(() => {
+                            alert('欢迎使用打工人收入计算器！\n请在左上角"设置"中更新您的收入信息，以便获得准确的计算结果。');
+                        }, 1000);
+                    }
                 },
                 toggleFullscreen() {
                     if (!document.fullscreenElement) {
@@ -713,9 +728,11 @@
                 saveToLocal() {
                     localStorage.setItem('incomeConfig', JSON.stringify(this.config));
                     localStorage.setItem('incomeSettings', JSON.stringify(this.settings));
+                    localStorage.setItem('isFirstVisit', JSON.stringify(this.isFirstVisit));
                 },
                 loadFromLocal() {
                     const savedConfig = localStorage.getItem('incomeConfig');
+                    const savedIsFirstVisit = localStorage.getItem('isFirstVisit');
                     const savedSettings = localStorage.getItem('incomeSettings');
                     
                     if (savedConfig) {
@@ -723,6 +740,9 @@
                     }
                     if (savedSettings) {
                         this.settings = JSON.parse(savedSettings);
+                    }
+                    if (savedIsFirstVisit !== null) {
+                        this.isFirstVisit = JSON.parse(savedIsFirstVisit);
                     }
                 }
             },
@@ -746,6 +766,8 @@
             mounted() {
                 this.loadFromLocal();
                 this.restartTimer();
+                // 显示首次访问提示
+                this.showFirstVisitTip();
             },
             beforeUnmount() {
                 if (this.updateTimer) {
