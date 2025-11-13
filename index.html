@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>打工人收入展示</title>
+    <title>我有多富 - 打工人收入展示</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -25,17 +25,21 @@
       <div class="fixed inset-0 -z-10" :style="bgOverlayStyle"></div>
       <header class="border-b bg-white/50 backdrop-blur sticky top-0 z-10">
         <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 class="text-xl sm:text-2xl font-bold">打工人收入展示</h1>
-          <div class="text-sm text-slate-600">{{ nowText }}</div>
+          <h1 class="text-xl sm:text-2xl font-bold">我有多富 - 打工人收入展示</h1>
+          <div class="flex items-center gap-4">
+            <div class="text-sm text-slate-600">{{ nowText }}</div>
+            <div class="text-base sm:text-lg font-semibold" :class="accent.link">{{ weatherText }}</div>
+            <button class="text-xs sm:text-sm rounded-full px-3 py-1 text-white" :class="accent.button" @click="ui.showConfig = !ui.showConfig">{{ ui.showConfig ? '隐藏配置' : '显示配置' }}</button>
+          </div>
         </div>
       </header>
 
       <main class="max-w-6xl mx-auto w-full px-6 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <section class="lg:col-span-2">
+        <section :class="ui.showConfig ? 'lg:col-span-2' : 'lg:col-span-3'">
           <div class="bg-white/70 backdrop-blur rounded-xl shadow-sm ring-1 ring-slate-200/60 p-8">
             <div class="flex flex-col items-center justify-center text-center">
               <div class="text-sm text-slate-700">今日收入</div>
-              <div class="mt-3 font-black tracking-tight tabular-nums leading-none text-6xl sm:text-7xl md:text-8xl">
+              <div class="mt-3 font-black tracking-tight tabular-nums leading-none" :class="ui.showConfig ? 'text-6xl sm:text-7xl md:text-8xl' : 'text-[12vw] md:text-[10vw] lg:text-[8vw]'">
                 {{ formatCurrency(todayEarned) }}
               </div>
               <div class="mt-4 text-slate-700 flex flex-wrap items-center justify-center gap-4">
@@ -62,11 +66,16 @@
                 <div class="text-xs text-slate-500">午休时段</div>
                 <div class="mt-1 text-lg font-semibold">{{ lunchText }}</div>
               </div>
+              <div class="rounded-lg bg-white/60 backdrop-blur p-4 sm:col-span-3">
+                <div class="text-xs text-slate-500">当前位置与天气</div>
+                <div class="mt-1 text-xl sm:text-2xl font-bold">{{ placeDisplay }}</div>
+                <div class="mt-2 text-3xl sm:text-4xl font-black">{{ temperatureDisplay }}</div>
+              </div>
             </div>
           </div>
         </section>
 
-        <section>
+        <section v-if="ui.showConfig">
           <div class="bg-white/70 backdrop-blur rounded-xl shadow-sm ring-1 ring-slate-200/60 p-6">
             <div class="flex items-center justify-between">
               <h2 class="text-lg font-semibold">配置</h2>
@@ -189,6 +198,7 @@
       <div class="hidden">
         bg-sky-600 hover:bg-sky-700 bg-emerald-600 hover:bg-emerald-700 bg-rose-600 hover:bg-rose-700 bg-amber-600 hover:bg-amber-700 bg-violet-600 hover:bg-violet-700 bg-cyan-600 hover:bg-cyan-700
         text-sky-700 ring-sky-200 bg-sky-50 text-emerald-700 ring-emerald-200 bg-emerald-50 text-rose-700 ring-rose-200 bg-rose-50 text-amber-700 ring-amber-200 bg-amber-50 text-violet-700 ring-violet-200 bg-violet-50 text-cyan-700 ring-cyan-200 bg-cyan-50
+        lg:col-span-2 lg:col-span-3 lg:grid-cols-1 lg:grid-cols-3 text-8xl md:text-9xl lg:text-10xl text-6xl sm:text-7xl md:text-8xl
       </div>
     </div>
 
@@ -232,7 +242,7 @@
             lunchEnd: "13:00",
             workingDays: [1, 2, 3, 4, 5],
             includeWeekends: false,
-            usePreciseMonth: false,
+            usePreciseMonth: true,
             accent: "sky",
             backgroundMode: "color",
             bgColor: "#e6f7ff",
@@ -242,7 +252,8 @@
             bgImageUrl: "",
           };
 
-          const conf = reactive(JSON.parse(localStorage.getItem("incomeConf") || JSON.stringify(defaults)));
+          const conf = reactive(Object.assign({}, defaults, JSON.parse(localStorage.getItem("incomeConf") || "{}")));
+          const ui = reactive({ showConfig: false });
 
           const weekDays = [
             { label: "周一", value: 1 },
@@ -345,6 +356,62 @@
             Object.assign(conf, defaults);
             saveConf();
           }
+          const weather = reactive({ city: "", region: "", district: "", temp: null, wind: null, loading: true, placeName: "" });
+
+          const placeDisplay = computed(() => weather.placeName || [weather.city, weather.region, weather.district].filter(Boolean).join(" ") || "当前位置");
+
+          const temperatureDisplay = computed(() => weather.temp != null ? `${Math.round(weather.temp)}°C · 风 ${weather.wind != null ? Math.round(weather.wind) : '--'} m/s` : "--");
+
+          const weatherText = computed(() => weather.loading ? "定位中..." : `${placeDisplay.value} ${temperatureDisplay.value}`);
+
+          async function fetchWeatherByCoords(lat, lon) {
+            try {
+              const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
+              const resp = await fetch(url);
+              const data = await resp.json();
+              const cur = data.current_weather || {};
+              weather.temp = cur.temperature ?? null;
+              weather.wind = cur.windspeed ?? null;
+            } catch (e) {
+              console.error(e);
+            }
+          }
+
+          async function fetchIPLocation() {
+            try {
+              const resp = await fetch("https://ipapi.co/json/");
+              const data = await resp.json();
+              const lat = data.latitude;
+              const lon = data.longitude;
+              weather.city = data.city || data.region || "";
+              if (lat && lon) await fetchWeatherByCoords(lat, lon);
+            } catch (e) {
+              console.error(e);
+            } finally {
+              weather.loading = false;
+            }
+          }
+
+          function initWeather() {
+            if (!navigator.geolocation) {
+              fetchIPLocation();
+              return;
+            }
+            navigator.geolocation.getCurrentPosition(
+              async (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                await fetchWeatherByCoords(lat, lon);
+                await fetchPlaceName(lat, lon);
+                weather.loading = false;
+              },
+              (err) => {
+                console.warn(err);
+                fetchIPLocation();
+              },
+              { enableHighAccuracy: true, timeout: 5000 }
+            );
+          }
 
           function hexToRgba(hex, alpha) {
             const h = hex.replace("#", "");
@@ -415,16 +482,43 @@
           const accent = computed(() => accentMap[conf.accent] || accentMap.sky);
 
           async function fetchBing() {
+            const primary = "https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=zh-CN";
+            const viaAllOrigins = (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
+            const viaJina = (u) => `https://r.jina.ai/http://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=zh-CN`;
             try {
-              const resp = await fetch("https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=zh-CN");
+              const resp = await fetch(primary);
               const data = await resp.json();
               const path = (data.images && data.images[0] && data.images[0].url) || "";
               const url = path ? `https://www.bing.com${path}` : "";
               bg.imageUrl = url;
               conf.bgImageUrl = url;
               saveConf();
-            } catch (e) {
-              console.error(e);
+            } catch (e1) {
+              try {
+                const resp2 = await fetch(viaAllOrigins(primary));
+                const text2 = await resp2.text();
+                const data2 = JSON.parse(text2);
+                const path2 = (data2.images && data2.images[0] && data2.images[0].url) || "";
+                const url2 = path2 ? `https://www.bing.com${path2}` : "";
+                bg.imageUrl = url2;
+                conf.bgImageUrl = url2;
+                saveConf();
+              } catch (e2) {
+                try {
+                  const resp3 = await fetch(viaJina(primary));
+                  const text3 = await resp3.text();
+                  const data3 = JSON.parse(text3);
+                  const path3 = (data3.images && data3.images[0] && data3.images[0].url) || "";
+                  const url3 = path3 ? `https://www.bing.com${path3}` : "";
+                  bg.imageUrl = url3;
+                  conf.bgImageUrl = url3;
+                  saveConf();
+                } catch (e3) {
+                  bg.imageUrl = "https://picsum.photos/1920/1080";
+                  conf.bgImageUrl = bg.imageUrl;
+                  saveConf();
+                }
+              }
             }
           }
 
@@ -455,10 +549,12 @@
 
           onMounted(() => {
             setInterval(() => (now.ts = Date.now()), 1000);
+            initWeather();
           });
 
           return {
             conf,
+            ui,
             weekDays,
             nowText,
             year,
@@ -481,9 +577,107 @@
             fetchPicsum,
             useUrl,
             onUpload,
+            weatherText,
           };
         },
       }).mount("#app");
     </script>
   </body>
 </html>
+          const weather = reactive({ city: "", temp: null, wind: null, loading: true });
+
+          const weatherText = computed(() => {
+            if (weather.loading) return "定位中...";
+            const t = weather.temp != null ? `${Math.round(weather.temp)}°C` : "--";
+            const w = weather.wind != null ? `${Math.round(weather.wind)} m/s` : "--";
+            const city = weather.city || "当前位置";
+            return `${city} ${t} · 风 ${w}`;
+          });
+
+          async function fetchWeatherByCoords(lat, lon) {
+            try {
+              const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
+              const resp = await fetch(url);
+              const data = await resp.json();
+              const cur = data.current_weather || {};
+              weather.temp = cur.temperature ?? null;
+              weather.wind = cur.windspeed ?? null;
+            } catch (e) {
+              console.error(e);
+            }
+          }
+
+          async function fetchIPLocation() {
+            try {
+              const resp = await fetch("https://ipapi.co/json/");
+              const data = await resp.json();
+              const lat = data.latitude;
+              const lon = data.longitude;
+              weather.city = data.city || "";
+              weather.region = data.region || "";
+              if (lat && lon) await fetchWeatherByCoords(lat, lon);
+              if (lat && lon) await fetchPlaceName(lat, lon);
+              weather.placeName = [weather.city, weather.region].filter(Boolean).join(" ") || weather.city;
+            } catch (e) {
+              console.error(e);
+            } finally {
+              weather.loading = false;
+            }
+          }
+
+          function initWeather() {
+            if (!navigator.geolocation) {
+              fetchIPLocation();
+              return;
+            }
+            navigator.geolocation.getCurrentPosition(
+              async (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                await fetchWeatherByCoords(lat, lon);
+                weather.loading = false;
+              },
+              (err) => {
+                console.warn(err);
+                fetchIPLocation();
+              },
+              { enableHighAccuracy: true, timeout: 5000 }
+            );
+          }
+          async function fetchPlaceName(lat, lon) {
+            const primary = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=zh-CN`;
+            const viaAllOrigins = (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
+            async function parse(resp) {
+              const data = await resp.json();
+              const addr = data.address || {};
+              const city = addr.city || addr.town || addr.village || addr.county || "";
+              const district = addr.district || addr.suburb || addr.quarter || addr.neighbourhood || "";
+              const region = addr.state || addr.province || "";
+              weather.city = city || weather.city;
+              weather.region = region || weather.region;
+              weather.district = district || weather.district;
+              const full = [city, district].filter(Boolean).join(" ");
+              weather.placeName = full || [city, region].filter(Boolean).join(" ");
+            }
+            try {
+              const resp = await fetch(primary);
+              await parse(resp);
+            } catch (e1) {
+              try {
+                const resp2 = await fetch(viaAllOrigins(primary));
+                const text2 = await resp2.text();
+                const data2 = JSON.parse(text2);
+                const addr = data2.address || {};
+                const city = addr.city || addr.town || addr.village || addr.county || "";
+                const district = addr.district || addr.suburb || addr.quarter || addr.neighbourhood || "";
+                const region = addr.state || addr.province || "";
+                weather.city = city || weather.city;
+                weather.region = region || weather.region;
+                weather.district = district || weather.district;
+                const full = [city, district].filter(Boolean).join(" ");
+                weather.placeName = full || [city, region].filter(Boolean).join(" ");
+              } catch (e2) {
+                // 保持已有 city/region 来源
+              }
+            }
+          }
