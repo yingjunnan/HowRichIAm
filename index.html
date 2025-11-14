@@ -318,10 +318,9 @@
                         <h4 class="font-semibold mb-3">刷新设置</h4>
                         <div>
                             <label class="block text-sm opacity-80 mb-1">数据刷新频率</label>
-                            <select v-model="config.refreshInterval" 
+                            <select v-model="config.refreshInterval"
+                                    @change="restartTimer"
                                     class="w-full bg-gray-800 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="100">每0.1秒</option>
-                                <option value="500">每0.5秒</option>
                                 <option value="1000">每1秒</option>
                                 <option value="2000">每2秒</option>
                                 <option value="5000">每5秒</option>
@@ -695,6 +694,7 @@
                 },
                 resetConfig() {
                     if (confirm('确定要重置所有设置吗？')) {
+                        const oldInterval = this.config.refreshInterval;
                         this.config = {
                             monthlySalary: 15000,
                             workDaysPerWeek: 5,
@@ -703,7 +703,7 @@
                             workEndTime: '18:00',
                             lunchStartTime: '12:00',
                             lunchEndTime: '13:00',
-                            refreshInterval: 1000,
+                            refreshInterval: oldInterval, // 保持用户当前的刷新频率设置
                             useActualMonthDays: true
                         };
                         this.settings = {
@@ -724,7 +724,9 @@
                         clearInterval(this.updateTimer);
                     }
                     // 使用箭头函数确保this指向正确的Vue实例
-                    this.updateTimer = setInterval(() => this.updateTime(), this.config.refreshInterval);
+                    const interval = parseInt(this.config.refreshInterval);
+                    console.log('设置刷新间隔为:', interval + 'ms'); // 调试日志
+                    this.updateTimer = setInterval(() => this.updateTime(), interval);
                 },
                 showTooltip(event) {
                     const rect = event.target.getBoundingClientRect();
@@ -762,11 +764,14 @@
                 config: {
                     handler(newVal, oldVal) {
                         this.saveToLocal();
-                        if (newVal.refreshInterval !== oldVal.refreshInterval) {
-                            this.restartTimer();
-                        }
                     },
                     deep: true
+                },
+                'config.refreshInterval': {
+                    handler(newVal, oldVal) {
+                        console.log('refreshInterval 单独监听：从', oldVal, '变更为', newVal);
+                        this.restartTimer();
+                    }
                 },
                 settings: {
                     handler() {
