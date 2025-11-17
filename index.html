@@ -116,11 +116,19 @@
 <body>
     <div id="app">
         <!-- 背景层 -->
-        <div class="fixed inset-0 -z-10" :style="backgroundStyle">
-            <img v-if="settings.wallpaperUrl" :src="settings.wallpaperUrl" 
-                 class="w-full h-full object-cover" 
-                 :style="{ filter: `blur(${settings.wallpaperBlur}px)` }">
-            <div v-else class="w-full h-full" :style="{ background: settings.themeColor }"></div>
+        <div class="fixed inset-0 -z-10">
+            <!-- 壁纸层 -->
+            <div v-if="settings.wallpaperUrl" class="absolute inset-0">
+                <img :src="settings.wallpaperUrl"
+                     class="w-full h-full object-cover"
+                     :style="{ filter: `blur(${settings.wallpaperBlur}px)` }">
+            </div>
+            <!-- 主题色层 -->
+            <div v-else class="absolute inset-0" :style="{ background: settings.themeColor }"></div>
+            <!-- 主题色覆盖层 (当切换主题时覆盖壁纸) -->
+            <div v-if="settings.wallpaperUrl && showThemeOverlay"
+                 class="absolute inset-0 transition-opacity duration-500"
+                 :style="{ background: settings.themeColor, opacity: themeOverlayOpacity }"></div>
         </div>
 
         <!-- 设置面板遮罩 -->
@@ -474,6 +482,8 @@
                     hideIncome: false,
                     selectedSearchEngine: 'bing',
                     searchQuery: '',
+                    showThemeOverlay: false,
+                    themeOverlayOpacity: 0,
                     config: {
                         monthlySalary: 15000,
                         workDaysPerWeek: 5,
@@ -494,15 +504,6 @@
                 }
             },
             computed: {
-                backgroundStyle() {
-                    if (this.settings.wallpaperUrl) {
-                        return {};
-                    }
-                    return {
-                        background: this.settings.themeColor,
-                        transition: 'background 0.5s ease'
-                    };
-                },
                 workHoursPerDay() {
                     const [lunchStartHour, lunchStartMin] = this.config.lunchStartTime.split(':').map(Number);
                     const [lunchEndHour, lunchEndMin] = this.config.lunchEndTime.split(':').map(Number);
@@ -769,6 +770,12 @@
                     const currentIndex = themes.indexOf(this.settings.themeColor);
                     const nextIndex = (currentIndex + 1) % themes.length;
                     this.settings.themeColor = themes[nextIndex];
+
+                    // 如果有壁纸，显示主题覆盖层
+                    if (this.settings.wallpaperUrl) {
+                        this.showThemeOverlay = true;
+                        this.themeOverlayOpacity = 0.8; // 设置透明度，让主题色能覆盖壁纸
+                    }
                 },
                 loadRandomWallpaper() {
                     const wallpapers = [];
@@ -778,6 +785,8 @@
                     }
                     const randomIndex = Math.floor(Math.random() * wallpapers.length);
                     this.settings.wallpaperUrl = wallpapers[randomIndex];
+                    // 加载新壁纸时清除主题覆盖层
+                    this.showThemeOverlay = false;
                 },
                 resetConfig() {
                     if (confirm('确定要重置所有设置吗？')) {
@@ -888,8 +897,12 @@
                     }
                 },
                 settings: {
-                    handler() {
+                    handler(newVal) {
                         this.saveToLocal();
+                        // 如果壁纸被清除，隐藏主题覆盖层
+                        if (!newVal.wallpaperUrl) {
+                            this.showThemeOverlay = false;
+                        }
                     },
                     deep: true
                 }
