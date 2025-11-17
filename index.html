@@ -124,12 +124,20 @@
         <div class="min-h-screen flex flex-col relative" :style="{ background: `rgba(0,0,0,${1-settings.pageOpacity})` }">
             
             <!-- 顶部栏 -->
-            <header class="p-4 flex justify-between items-center">
-                <button @click.stop="toggleSettings" 
-                        class="glass-effect dark-glass px-4 py-2 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition">
-                    <i class="fas fa-cog mr-2"></i>设置
-                </button>
-                <div class="glass-effect dark-glass px-4 py-2 rounded-lg text-white text-lg text-center">
+            <header class="p-4 flex justify-between items-center relative">
+                <div class="flex gap-2">
+                    <button @click.stop="toggleSettings"
+                            class="glass-effect dark-glass px-4 py-2 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition">
+                        <i class="fas fa-cog mr-2"></i>设置
+                    </button>
+                    <!-- 占位按钮，用于平衡右侧按钮数量 -->
+                    <div class="invisible">
+                        <button class="glass-effect dark-glass px-4 py-2 rounded-lg text-white">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="glass-effect dark-glass px-4 py-2 rounded-lg text-white text-lg text-center absolute left-1/2 transform -translate-x-1/2">
                     <i class="fas fa-clock mr-6"></i>{{ formattedDateTime }}
                 </div>
                 <div class="flex gap-2">
