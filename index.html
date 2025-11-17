@@ -38,6 +38,25 @@
             border: 1px solid rgba(255, 255, 255, 0.15);
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
+
+        .light-glass-dynamic {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(var(--blur-amount, 15px)) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
+        }
+
+        .light-glass-dynamic .text-white {
+            color: #1f2937 !important;
+        }
+
+        .light-glass-dynamic .opacity-80 {
+            opacity: 0.8 !important;
+        }
+
+        .light-glass-dynamic .opacity-60 {
+            opacity: 0.6 !important;
+        }
         
         .income-display {
             animation: pulse 2s infinite;
@@ -143,7 +162,7 @@
             <header class="p-4 flex justify-between items-center relative">
                 <div class="flex gap-2">
                     <button @click.stop="toggleSettings"
-                            class="glass-effect dark-glass-dynamic px-4 py-2 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition">
+                            :class="['glass-effect', glassClass, 'px-4', 'py-2', 'rounded-lg', 'text-white', 'hover:bg-white', 'hover:bg-opacity-20', 'transition']">
                         <i class="fas fa-cog mr-2"></i>设置
                     </button>
                     <!-- 占位按钮，用于平衡右侧按钮数量 -->
@@ -153,24 +172,24 @@
                         </button>
                     </div>
                 </div>
-                <div class="glass-effect dark-glass-dynamic px-4 py-2 rounded-lg text-white text-lg text-center absolute left-1/2 transform -translate-x-1/2">
+                <div :class="['glass-effect', glassClass, 'px-4', 'py-2', 'rounded-lg', 'text-white', 'text-lg', 'text-center', 'absolute', 'left-1/2', 'transform', '-translate-x-1/2']">
                     <i class="fas fa-clock mr-6"></i>{{ formattedDateTime }}
                 </div>
                 <div class="flex gap-2">
                     <button @click="toggleHideIncome" title="显示/隐藏收入"
-                            class="glass-effect dark-glass-dynamic px-4 py-2 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition">
+                            :class="['glass-effect', glassClass, 'px-4', 'py-2', 'rounded-lg', 'text-white', 'hover:bg-white', 'hover:bg-opacity-20', 'transition']">
                         <i :class="hideIncome ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
                     </button>
                     <button @click="loadRandomWallpaper" title="随机壁纸"
-                            class="glass-effect dark-glass-dynamic px-4 py-2 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition">
+                            :class="['glass-effect', glassClass, 'px-4', 'py-2', 'rounded-lg', 'text-white', 'hover:bg-white', 'hover:bg-opacity-20', 'transition']">
                         <i class="fas fa-image"></i>
                     </button>
                     <button @click="toggleFullscreen" title="切换全屏"
-                            class="glass-effect dark-glass-dynamic px-4 py-2 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition">
+                            :class="['glass-effect', glassClass, 'px-4', 'py-2', 'rounded-lg', 'text-white', 'hover:bg-white', 'hover:bg-opacity-20', 'transition']">
                         <i class="fas fa-expand"></i>
                     </button>
                     <button @click="changeTheme" title="切换主题"
-                            class="glass-effect dark-glass-dynamic px-4 py-2 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition">
+                            :class="['glass-effect', glassClass, 'px-4', 'py-2', 'rounded-lg', 'text-white', 'hover:bg-white', 'hover:bg-opacity-20', 'transition']">
                         <i class="fas fa-palette"></i>
                     </button>
                 </div>
@@ -178,7 +197,7 @@
 
             <!-- 搜索框区域 -->
             <div class="px-4 pb-4">
-                <div class="glass-effect dark-glass-dynamic rounded-lg p-4 max-w-3xl mx-auto">
+                <div :class="['glass-effect', glassClass, 'rounded-lg', 'p-4', 'max-w-3xl', 'mx-auto']">
                     <form @submit.prevent="performSearch" class="flex gap-2">
                         <select v-model="selectedSearchEngine" 
                                 class="bg-gray-800 text-white rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -226,7 +245,7 @@
                         </div>
 
                         <!-- 日薪显示 -->
-                        <div class="glass-effect dark-glass-dynamic rounded-lg px-4 py-2 mt-4 inline-block">
+                        <div :class="['glass-effect', glassClass, 'rounded-lg', 'px-4', 'py-2', 'mt-4', 'inline-block']">
                             <span class="text-white opacity-80">日薪: </span>
                             <span class="text-white text-xl font-bold income-number">
                                 <span v-if="!hideIncome">¥{{ formatNumber(dailyIncome) }}</span>
@@ -236,7 +255,7 @@
                     </div>
 
                     <!-- 工作进度 -->
-                    <div class="glass-effect dark-glass-dynamic rounded-xl p-6 mb-6">
+                    <div :class="['glass-effect', glassClass, 'rounded-xl', 'p-6', 'mb-6']">
                         <div class="flex justify-between text-white mb-2">
                             <span>今日工作进度</span>
                             <span>{{ Math.round(workProgress) }}%</span>
@@ -267,21 +286,21 @@
 
                     <!-- 统计信息 -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <div class="glass-effect dark-glass-dynamic rounded-xl p-4">
+                        <div :class="['glass-effect', glassClass, 'rounded-xl', 'p-4']">
                             <div class="text-white opacity-80 mb-1">每小时收入</div>
                             <div class="text-2xl font-bold text-white income-number">
                                 <span v-if="!hideIncome">¥{{ formatNumber(perHourIncome) }}</span>
                                 <span v-else>****</span>
                             </div>
                         </div>
-                        <div class="glass-effect dark-glass-dynamic rounded-xl p-4">
+                        <div :class="['glass-effect', glassClass, 'rounded-xl', 'p-4']">
                             <div class="text-white opacity-80 mb-1">每分钟收入</div>
                             <div class="text-2xl font-bold text-white income-number">
                                 <span v-if="!hideIncome">¥{{ formatNumber(perMinuteIncome) }}</span>
                                 <span v-else>****</span>
                             </div>
                         </div>
-                        <div class="glass-effect dark-glass-dynamic rounded-xl p-4">
+                        <div :class="['glass-effect', glassClass, 'rounded-xl', 'p-4']">
                             <div class="text-white opacity-80 mb-1">本月预计收入</div>
                             <div class="text-2xl font-bold text-white income-number">
                                 <span v-if="!hideIncome">¥{{ formatNumber(monthlyEstimatedIncome) }}</span>
@@ -291,7 +310,7 @@
                     </div>
 
                     <!-- 快速统计 -->
-                    <div class="glass-effect dark-glass-dynamic rounded-xl p-4">
+                    <div :class="['glass-effect', glassClass, 'rounded-xl', 'p-4']">
                         <div class="flex justify-around text-white">
                             <div class="text-center">
                                 <div class="opacity-60 text-sm">本月已工作</div>
@@ -424,6 +443,21 @@
                                 <div class="text-center text-sm opacity-60">{{ settings.pageOpacity }}% ({{ (5 + settings.pageOpacity * 0.2).toFixed(1) }}px)</div>
                             </div>
                             <div>
+                                <label class="block text-sm opacity-80 mb-1">毛玻璃颜色</label>
+                                <div class="flex gap-4">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" value="dark" v-model="settings.glassTheme"
+                                               class="w-4 h-4 text-blue-600 bg-gray-800">
+                                        <span>黑色</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" value="light" v-model="settings.glassTheme"
+                                               class="w-4 h-4 text-blue-600 bg-gray-800">
+                                        <span>白色</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div>
                                 <label class="block text-sm opacity-80 mb-1">壁纸设置</label>
                                 <div class="space-y-2">
                                     <button style="display:none" @click="loadRandomWallpaper" 
@@ -499,11 +533,15 @@
                         themeColor: '#059669',
                         pageOpacity: 0.8,
                         wallpaperUrl: '',
-                        wallpaperBlur: 5
+                        wallpaperBlur: 5,
+                        glassTheme: 'dark'
                     }
                 }
             },
             computed: {
+                glassClass() {
+                    return this.settings.glassTheme === 'light' ? 'light-glass-dynamic' : 'dark-glass-dynamic';
+                },
                 workHoursPerDay() {
                     const [lunchStartHour, lunchStartMin] = this.config.lunchStartTime.split(':').map(Number);
                     const [lunchEndHour, lunchEndMin] = this.config.lunchEndTime.split(':').map(Number);
@@ -806,7 +844,8 @@
                             themeColor: '#1e40af',
                             pageOpacity: 0.8,
                             wallpaperUrl: '',
-                            wallpaperBlur: 5
+                            wallpaperBlur: 5,
+                            glassTheme: 'dark'
                         };
                         this.restartTimer();
                     }
