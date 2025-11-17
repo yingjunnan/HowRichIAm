@@ -152,6 +152,28 @@
                 </div>
             </header>
 
+            <!-- 搜索框区域 -->
+            <div class="px-4 pb-4">
+                <div class="glass-effect dark-glass rounded-lg p-4 max-w-3xl mx-auto">
+                    <form @submit.prevent="performSearch" class="flex gap-2">
+                        <select v-model="selectedSearchEngine" 
+                                class="bg-gray-800 text-white rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="baidu">百度</option>
+                            <option value="bing">Bing</option>
+                            <option value="google">Google</option>
+                        </select>
+                        <input type="text" 
+                               v-model="searchQuery"
+                               placeholder="输入搜索内容..."
+                               class="flex-1 bg-gray-800 text-white rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button type="submit" 
+                                class="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 transition">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
             <!-- 主内容区 -->
             <main class="flex-1 flex items-center justify-center p-8">
                 <div class="text-center max-w-4xl mx-auto">
@@ -434,6 +456,8 @@
                     updateTimer: null,
                     isFirstVisit: true,
                     hideIncome: false,
+                    selectedSearchEngine: 'bing',
+                    searchQuery: '',
                     config: {
                         monthlySalary: 15000,
                         workDaysPerWeek: 5,
@@ -791,6 +815,28 @@
                     }
                     if (savedHideIncome !== null) {
                         this.hideIncome = JSON.parse(savedHideIncome);
+                    }
+                },
+                performSearch() {
+                    if (!this.searchQuery.trim()) return;
+
+                    let searchUrl = '';
+                    const encodedQuery = encodeURIComponent(this.searchQuery);
+
+                    switch(this.selectedSearchEngine) {
+                        case 'baidu':
+                            searchUrl = `https://www.baidu.com/s?wd=${encodedQuery}`;
+                            break;
+                        case 'bing':
+                            searchUrl = `https://www.bing.com/search?q=${encodedQuery}`;
+                            break;
+                        case 'google':
+                            searchUrl = `https://www.google.com/search?q=${encodedQuery}`;
+                            break;
+                    }
+
+                    if (searchUrl) {
+                        window.open(searchUrl, '_blank');
                     }
                 }
             },
