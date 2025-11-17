@@ -609,13 +609,31 @@
                     return Math.min((this.workedMinutesToday / totalWorkMinutes) * 100, 100);
                 },
                 currentDayIncome() {
-                    if (!this.isWorkingTime && !this.isBeforeWork) {
-                        return this.hourlyIncome * this.workHoursPerDay;
-                    }
+                    // 如果是上班前
                     if (!this.isWorkingTime && this.isBeforeWork) {
                         return 0;
                     }
-                    
+
+                    // 如果是午休时间，显示到午休开始时的累计收入
+                    if (this.isOnBreak) {
+                        const [workStartHour, workStartMin] = this.config.workStartTime.split(':').map(Number);
+                        const [lunchStartHour, lunchStartMin] = this.config.lunchStartTime.split(':').map(Number);
+
+                        const workStartMinutes = workStartHour * 60 + workStartMin;
+                        const lunchStartMinutes = lunchStartHour * 60 + lunchStartMin;
+
+                        // 上午工作时长（分钟）
+                        const morningWorkMinutes = lunchStartMinutes - workStartMinutes;
+
+                        return (morningWorkMinutes / 60) * this.hourlyIncome;
+                    }
+
+                    // 如果是工作日已完成（下班后）
+                    if (!this.isWorkingTime && !this.isBeforeWork) {
+                        return this.hourlyIncome * this.workHoursPerDay;
+                    }
+
+                    // 正常工作时间，显示当前累计收入
                     const workedHours = this.workedMinutesToday / 60;
                     return workedHours * this.hourlyIncome;
                 },
