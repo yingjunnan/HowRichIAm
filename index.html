@@ -910,6 +910,10 @@
             mounted() {
                 this.loadFromLocal();
                 this.restartTimer();
+                // 如果没有设置壁纸，自动加载一个随机壁纸
+                if (!this.settings.wallpaperUrl) {
+                    this.loadRandomWallpaper();
+                }
                 // 显示首次访问提示
                 this.showFirstVisitTip();
             },
